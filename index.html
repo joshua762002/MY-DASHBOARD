@@ -3,491 +3,929 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
-  <title>ROBOTRON | Environmental Core</title>
-  <!-- Tailwind CSS -->
+  <title>ROBOTRON | Environmental Core · Real‑time Sentinel</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-    * { font-family: 'Share Tech Mono', monospace; margin: 0; padding: 0; box-sizing: border-box; }
-    
-    /* Canvas background – live robotic animation */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --cyan: #00f5ff;
+      --cyan-dim: #00f5ff30;
+      --cyan-glow: 0 0 12px #00f5ff80;
+      --orange: #ff6b35;
+      --green: #00ff9f;
+      --red: #ff2d55;
+      --bg: #030508;
+      --panel: rgba(8, 12, 20, 0.86);
+    }
+
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      background: var(--bg);
+      color: #c8d8e8;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* animated canvas background */
     #bg-canvas {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: -1;
-      background: #05070c;
+      z-index: 0;
+      pointer-events: none;
     }
-    
-    .content {
+
+    .shell {
       position: relative;
       z-index: 10;
-      padding: 1rem;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1rem 1rem 1.5rem;
     }
-    
-    /* Robotic panel */
-    .cyber-panel {
-      background: rgba(10, 14, 23, 0.75);
-      backdrop-filter: blur(8px);
-      border: 1px solid #00ffff30;
-      border-radius: 0px;
-      box-shadow: 0 0 10px rgba(0, 255, 255, 0.2), inset 0 0 5px rgba(0, 255, 255, 0.1);
-      transition: all 0.2s ease;
+
+    /* glass panels */
+    .panel {
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--cyan-dim);
+      border-radius: 2px;
+      box-shadow: 0 0 0 1px #ffffff04, inset 0 1px 0 #ffffff08;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      position: relative;
     }
-    .cyber-panel:hover {
-      border-color: #00ffff;
-      box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
-    }
-    
-    /* Digital readout */
-    .digital-number {
-      text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff80;
-      letter-spacing: 2px;
-    }
-    
-    /* LED indicators */
-    .led-red {
-      width: 12px;
-      height: 12px;
-      background: #ff3300;
-      border-radius: 50%;
-      box-shadow: 0 0 6px #ff3300;
-      animation: pulseRed 1.2s infinite;
-    }
-    .led-green {
-      width: 12px;
-      height: 12px;
-      background: #00ffaa;
-      border-radius: 50%;
-      box-shadow: 0 0 6px #00ffaa;
-      animation: pulseGreen 1s infinite;
-    }
-    @keyframes pulseRed {
-      0% { opacity: 0.4; transform: scale(0.8);}
-      100% { opacity: 1; transform: scale(1.2);}
-    }
-    @keyframes pulseGreen {
-      0% { opacity: 0.5; transform: scale(0.8);}
-      100% { opacity: 1; transform: scale(1.2);}
-    }
-    
-    /* Scanning line for chart */
-    .scan-line {
+
+    .panel::before {
+      content: '';
       position: absolute;
       top: 0;
       left: 0;
-      width: 2px;
-      height: 100%;
-      background: linear-gradient(180deg, #00ffff00, #00ffff, #00ffff00);
-      animation: scanMove 3s linear infinite;
-      pointer-events: none;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0.5;
     }
-    @keyframes scanMove {
-      0% { left: 0%; opacity: 0.8; }
-      100% { left: 100%; opacity: 0; }
-    }
-    
-    /* Table styling */
-    .data-table th, .data-table td {
-      border-bottom: 1px solid #00ffff30;
-      padding: 12px 8px;
-      text-align: left;
-    }
-    .data-table tr:hover {
-      background: #00ffff10;
-    }
-    
-    /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #1e1f2a; }
-    ::-webkit-scrollbar-thumb { background: #00ffff; border-radius: 3px; }
 
-    /* Navbar link styling */
-    .nav-link {
-      transition: color 0.2s, text-shadow 0.2s;
+    .panel:hover {
+      border-color: #00f5ff70;
+      box-shadow: var(--cyan-glow);
+    }
+
+    /* corner accent */
+    .panel-corners::after,
+    .panel-corners::before {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: var(--cyan);
+      border-style: solid;
+      opacity: 0.7;
+    }
+
+    .panel-corners::before {
+      top: -1px;
+      left: -1px;
+      border-width: 1px 0 0 1px;
+    }
+
+    .panel-corners::after {
+      bottom: -1px;
+      right: -1px;
+      border-width: 0 1px 1px 0;
+    }
+
+    /* navbar */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 0.75rem 1.25rem;
+      background: rgba(3, 5, 8, 0.94);
+      border-bottom: 1px solid var(--cyan-dim);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+
+    .brand {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      color: var(--cyan);
+      text-shadow: var(--cyan-glow);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand i {
+      font-size: 1.3rem;
+    }
+
+    .brand .sub {
+      font-size: 0.6rem;
+      color: #5580a0;
+      letter-spacing: 0.2em;
+      display: block;
+      margin-top: 0.1rem;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-tab {
+      padding: 0.4rem 1rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: #7090a0;
+      border: 1px solid transparent;
+      border-radius: 2px;
       cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
     }
-    .nav-link:hover {
-      color: #00ffff;
-      text-shadow: 0 0 5px #00ffff;
+
+    .nav-tab:hover {
+      color: var(--cyan);
+      border-color: var(--cyan-dim);
     }
-    .nav-link.active {
-      color: #00ffff;
-      text-shadow: 0 0 5px #00ffff;
-      border-bottom: 1px solid #00ffff;
+
+    .nav-tab.active {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      background: #00f5ff10;
+      text-shadow: 0 0 8px var(--cyan);
     }
-    /* View containers */
+
+    .conn-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.85rem;
+      border: 1px solid;
+      border-radius: 2px;
+      background: #03050880;
+    }
+
+    .conn-badge.online {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .conn-badge.offline {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .conn-badge.loading {
+      border-color: #f0a300;
+      color: #f0a300;
+    }
+
+    /* metric cards */
+    .metric-card {
+      padding: 1.2rem;
+    }
+
+    .metric-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: #5580a0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .metric-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3.8rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    @media (min-width: 640px) {
+      .metric-value {
+        font-size: 4.5rem;
+      }
+    }
+
+    .metric-unit {
+      font-size: 1.2rem;
+      margin-left: 0.2rem;
+      opacity: 0.7;
+    }
+
+    .progress-bar {
+      height: 3px;
+      background: #00f5ff20;
+      border-radius: 2px;
+      margin-top: 0.65rem;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      transition: width 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    }
+
+    .stat-pill {
+      padding: 0.75rem 0.5rem;
+      text-align: center;
+    }
+
+    .stat-pill .label {
+      font-size: 0.6rem;
+      letter-spacing: 0.18em;
+      color: #4a6a80;
+    }
+
+    .stat-pill .value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #e0f0ff;
+    }
+
+    /* charts */
+    .chart-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .chart-title {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* table responsive */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+
+    .data-table thead tr {
+      border-bottom: 1px solid var(--cyan-dim);
+    }
+
+    .data-table th {
+      padding: 0.6rem 0.5rem;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      color: #4a6a80;
+      text-align: left;
+      font-weight: normal;
+    }
+
+    .data-table td {
+      padding: 0.65rem 0.5rem;
+      border-bottom: 1px solid #ffffff08;
+      color: #b0c8d8;
+      word-break: break-word;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 2px;
+      font-size: 0.62rem;
+    }
+
+    .badge-ok {
+      background: #00ff9f12;
+      border: 1px solid #00ff9f40;
+      color: var(--green);
+    }
+
+    .badge-err {
+      background: #ff2d5512;
+      border: 1px solid #ff2d5540;
+      color: var(--red);
+    }
+
+    /* LED */
+    .led {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .led-g {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 1.4s infinite alternate;
+    }
+
+    .led-r {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+      animation: pulse 1s infinite alternate;
+    }
+
+    .led-y {
+      background: #f0a300;
+      box-shadow: 0 0 8px #f0a300;
+      animation: pulse 1.6s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from {
+        opacity: 0.5;
+        transform: scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1.15);
+      }
+    }
+
+    /* views */
     .view {
       display: none;
     }
-    .view.active-view {
+
+    .view.active {
       display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* responsive grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .grid-2-charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.2rem 0 0.8rem;
+    }
+
+    .section-divider .line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--cyan-dim), transparent);
+    }
+
+    .section-divider .label {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      color: #3a5a70;
+    }
+
+    /* scroll */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0a0e16;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #00f5ff40;
+      border-radius: 3px;
+    }
+
+    /* loading overlay */
+    #loadOverlay {
+      position: fixed;
+      inset: 0;
+      background: #030508;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      transition: opacity 0.5s;
+    }
+
+    #loadOverlay.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .load-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--cyan);
+      text-shadow: var(--cyan-glow);
+    }
+
+    .load-bar-track {
+      width: 220px;
+      height: 2px;
+      background: #00f5ff15;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .load-bar-fill {
+      height: 100%;
+      background: var(--cyan);
+      animation: loadBar 1.2s ease forwards;
+    }
+
+    @keyframes loadBar {
+      0% {
+        width: 0%;
+      }
+      100% {
+        width: 100%;
+      }
+    }
+
+    .retry-btn {
+      background: transparent;
+      border: 1px solid var(--cyan-dim);
+      padding: 0.25rem 0.8rem;
+      font-size: 0.65rem;
+      color: var(--cyan);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .retry-btn:hover {
+      background: #00f5ff20;
+      border-color: var(--cyan);
+    }
+
+    /* touch optimizations */
+    button,
+    .nav-tab,
+    .retry-btn {
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    @media (max-width: 480px) {
+      .shell {
+        padding: 0.75rem;
+      }
+
+      .metric-card {
+        padding: 1rem;
+      }
+
+      .stat-pill .value {
+        font-size: 1rem;
+      }
+
+      .data-table th,
+      .data-table td {
+        padding: 0.5rem 0.3rem;
+        font-size: 0.7rem;
+      }
     }
   </style>
 </head>
 <body>
 
+<div id="loadOverlay">
+  <div class="load-logo"><i class="fas fa-microchip mr-2"></i>ROBOTRON</div>
+  <div class="load-bar-track"><div class="load-bar-fill"></div></div>
+  <div class="load-status">SYNCING WITH SUPABASE • REAL-TIME CORE</div>
+</div>
+
 <canvas id="bg-canvas"></canvas>
 
-<div class="content max-w-7xl mx-auto">
-  <!-- Navbar -->
-  <nav class="cyber-panel rounded-none px-4 py-3 mb-6 flex flex-wrap justify-between items-center">
-    <div class="flex items-center gap-2">
-      <i class="fas fa-microchip text-cyan-400 text-2xl"></i>
-      <span class="text-white text-xl font-bold tracking-wider">ROBOTRON::CORE</span>
+<nav>
+  <div class="brand">
+    <i class="fas fa-microchip"></i>
+    <div>
+      ROBOTRON
+      <span class="sub">ENV CORE v3.0</span>
     </div>
-    <div class="flex gap-6 text-sm md:text-base">
-      <a data-view="dashboard" class="nav-link active text-gray-300"><i class="fas fa-chart-line"></i> Dashboard</a>
-      <a data-view="history" class="nav-link text-gray-300"><i class="fas fa-history"></i> History</a>
-      <a data-view="settings" class="nav-link text-gray-300"><i class="fas fa-cog"></i> Settings</a>
-    </div>
-  </nav>
-
-  <!-- Header (common) -->
-  <div class="text-center mb-8">
-    <div class="cyber-panel inline-block px-6 py-2">
-      <h1 class="text-3xl md:text-4xl font-bold tracking-wider bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-        <i class="fas fa-microchip mr-2"></i> ENVIRONMENTAL CORE
-      </h1>
-    </div>
-    <p class="text-cyan-300 text-sm mt-3 font-mono">SYSTEM STATUS: <span id="globalStatus" class="text-green-400">ACTIVE</span> | REAL‑TIME DATA STREAM</p>
   </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-view="dashboard"><i class="fas fa-chart-line"></i> DASH</button>
+    <button class="nav-tab" data-view="history"><i class="fas fa-database"></i> HISTORY</button>
+    <button class="nav-tab" data-view="settings"><i class="fas fa-cog"></i> CONFIG</button>
+  </div>
+  <div id="connBadge" class="conn-badge loading"><div class="led led-y"></div> SYNC</div>
+</nav>
 
-  <!-- ==================== DASHBOARD VIEW ==================== -->
-  <div id="dashboardView" class="view active-view">
-    <!-- Sensor Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      <div class="cyber-panel p-5 relative">
-        <div class="absolute top-2 right-2 text-cyan-400"><i class="fas fa-microchip"></i></div>
-        <div class="flex items-center gap-3 mb-4">
-          <i class="fas fa-temperature-high text-3xl text-red-500"></i>
-          <h2 class="text-cyan-300 text-xl font-mono">TEMP_MODULE</h2>
-        </div>
-        <div class="text-center">
-          <span id="currentTemp" class="text-7xl font-bold text-white digital-number">--</span>
-          <span class="text-2xl text-cyan-300">°C</span>
-        </div>
-        <div class="mt-3 flex justify-between text-xs text-gray-400 border-t border-cyan-500/30 pt-2">
-          <span><i class="far fa-clock"></i> LAST_READ: <span id="lastUpdate" class="font-mono">--</span></span>
-        </div>
+<div class="shell">
+
+  <!-- DASHBOARD -->
+  <div id="dashboardView" class="view active">
+    <div style="padding:0.5rem 0 0.75rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 0.5rem;">
+      <div>
+        <h1 style="font-family:'Orbitron'; font-size:1rem; letter-spacing:0.12em;">REAL‑TIME MONITOR</h1>
+        <p style="font-size:0.6rem; letter-spacing:0.12em; color:#4a6a80;">ESP32 · DHT11 · SUPABASE STREAM</p>
       </div>
-      <div class="cyber-panel p-5 relative">
-        <div class="absolute top-2 right-2 text-cyan-400"><i class="fas fa-microchip"></i></div>
-        <div class="flex items-center gap-3 mb-4">
-          <i class="fas fa-tint text-3xl text-blue-400"></i>
-          <h2 class="text-cyan-300 text-xl font-mono">HUMID_MODULE</h2>
-        </div>
-        <div class="text-center">
-          <span id="currentHumidity" class="text-7xl font-bold text-white digital-number">--</span>
-          <span class="text-2xl text-cyan-300">%</span>
-        </div>
-        <div class="mt-3 flex justify-between items-center border-t border-cyan-500/30 pt-2">
-          <span class="text-xs text-gray-400"><i class="fas fa-microchip"></i> SENSOR: <span id="sensorStatusText">INIT</span></span>
-          <div id="sensorLed" class="led-red"></div>
-        </div>
+      <div style="display:flex; align-items:center; gap:1rem; font-size:0.65rem;">
+        <span><i class="fas fa-clock"></i> <span id="lastUpdate">—</span></span>
+        <button id="manualRefreshBtn" class="retry-btn" style="padding:0.2rem 0.7rem;"><i class="fas fa-sync-alt"></i> REFRESH</button>
       </div>
     </div>
 
-    <!-- Summary Statistics -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">MIN TEMP</div><div class="text-2xl font-bold text-white"><span id="minTemp">--</span> °C</div></div>
-      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">MAX TEMP</div><div class="text-2xl font-bold text-white"><span id="maxTemp">--</span> °C</div></div>
-      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">AVG TEMP</div><div class="text-2xl font-bold text-white"><span id="avgTemp">--</span> °C</div></div>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">MIN HUM</div><div class="text-2xl font-bold text-white"><span id="minHum">--</span> %</div></div>
-      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">MAX HUM</div><div class="text-2xl font-bold text-white"><span id="maxHum">--</span> %</div></div>
-      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">AVG HUM</div><div class="text-2xl font-bold text-white"><span id="avgHum">--</span> %</div></div>
-    </div>
-
-    <!-- Dual Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <div class="cyber-panel p-5 relative">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-cyan-300 text-xl font-mono"><i class="fas fa-chart-line"></i> TELEMETRY_HISTORY [24H]</h2>
-          <div class="flex gap-3 text-xs"><span class="text-red-400">TEMP</span><span class="text-blue-400">HUM</span></div>
-        </div>
-        <div class="relative"><canvas id="historyChart" height="180"></canvas><div class="scan-line"></div></div>
+    <div class="grid-2" style="margin-bottom:1rem;">
+      <div class="panel panel-corners metric-card">
+        <div class="metric-label"><i class="fas fa-temperature-high"></i> TEMPERATURE MODULE</div>
+        <div><span class="metric-value metric-temp" id="currentTemp">—</span><span class="metric-unit">°C</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="tempBar" style="background:linear-gradient(90deg,#ff6b35,#ff9500);width:0%;"></div></div>
+        <div class="metric-footer" style="display:flex;justify-content:space-between;margin-top:0.5rem;"><span><i class="fas fa-wave-square"></i> LIVE</span><span id="tempTrend">—</span></div>
       </div>
-      <div class="cyber-panel p-5">
-        <div class="flex justify-between items-center mb-4"><h2 class="text-cyan-300 text-xl font-mono"><i class="fas fa-chart-bar"></i> DAILY_AVG [7D]</h2></div>
-        <canvas id="dailyBarChart" height="180"></canvas>
+      <div class="panel panel-corners metric-card">
+        <div class="metric-label"><i class="fas fa-tint"></i> HUMIDITY MODULE</div>
+        <div><span class="metric-value metric-hum" id="currentHum">—</span><span class="metric-unit">%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="humBar" style="background:linear-gradient(90deg,#0080ff,#00aaff);width:0%;"></div></div>
+        <div class="metric-footer" style="display:flex;justify-content:space-between;margin-top:0.5rem;"><span><i class="fas fa-broadcast-tower"></i> SENSOR: <span id="sensorStatusTxt">—</span></span><span id="humTrend">—</span></div>
       </div>
     </div>
 
-    <!-- Recent Table -->
-    <div class="cyber-panel p-5 overflow-hidden mb-8">
-      <h2 class="text-cyan-300 text-xl font-mono mb-3"><i class="fas fa-database"></i> DATA_LOG (last 10)</h2>
-      <div class="overflow-x-auto">
-        <table class="data-table w-full text-sm text-gray-300">
-          <thead><tr class="border-b border-cyan-500/40"><th>TIMESTAMP</th><th>TEMP (°C)</th><th>HUM (%)</th><th>STATUS</th> </tr></thead>
-          <tbody id="recentTableBody"><tr><td colspan="4" class="text-center py-6">AWAITING DATA FEED...</td></tr></tbody>
-        </table>
+    <div class="section-divider"><div class="line"></div><span class="label">TEMPERATURE STATS</span><div class="line"></div></div>
+    <div class="grid-3">
+      <div class="panel stat-pill"><div class="label">MIN TEMP</div><div class="value" id="minTemp">—<span class="unit">°C</span></div></div>
+      <div class="panel stat-pill"><div class="label">MAX TEMP</div><div class="value" id="maxTemp">—<span class="unit">°C</span></div></div>
+      <div class="panel stat-pill"><div class="label">AVG TEMP</div><div class="value" id="avgTemp">—<span class="unit">°C</span></div></div>
+    </div>
+
+    <div class="section-divider"><div class="line"></div><span class="label">HUMIDITY STATS</span><div class="line"></div></div>
+    <div class="grid-3">
+      <div class="panel stat-pill"><div class="label">MIN HUM</div><div class="value" id="minHum">—<span class="unit">%</span></div></div>
+      <div class="panel stat-pill"><div class="label">MAX HUM</div><div class="value" id="maxHum">—<span class="unit">%</span></div></div>
+      <div class="panel stat-pill"><div class="label">AVG HUM</div><div class="value" id="avgHum">—<span class="unit">%</span></div></div>
+    </div>
+
+    <div class="grid-2-charts">
+      <div class="panel panel-corners" style="padding:1rem;"><div class="chart-header"><div class="chart-title"><i class="fas fa-chart-area"></i> 24H TELEMETRY</div><div><span class="dot" style="background:#ff6b35;"></span> °C <span class="dot ml-2" style="background:#00aaff;"></span> %</div></div><canvas id="historyChart" height="150"></canvas></div>
+      <div class="panel panel-corners" style="padding:1rem;"><div class="chart-header"><div class="chart-title"><i class="fas fa-chart-bar"></i> 7‑DAY AVERAGE</div></div><canvas id="barChart" height="150"></canvas></div>
+    </div>
+
+    <div class="panel panel-corners" style="padding:1rem; margin-top:0.5rem;">
+      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom:0.8rem;"><div class="chart-title"><i class="fas fa-table"></i> LAST 10 READINGS</div><span id="totalRecords" style="font-size:0.65rem;">0 records</span></div>
+      <div style="overflow-x:auto;">
+        <table class="data-table"><thead><tr><th>#</th><th>TIMESTAMP</th><th>TEMP</th><th>HUM</th><th>STATUS</th></tr></thead><tbody id="recentTableBody"><tr><td colspan="5" style="text-align:center;">INITIALIZING STREAM...</td></tr></tbody></table>
       </div>
-      <div class="mt-3 text-right text-cyan-400 text-xs"><i class="fas fa-sync-alt fa-fw"></i> REAL‑TIME SYNC | <span id="recordCount">0</span> RECORDS</div>
     </div>
   </div>
 
-  <!-- ==================== HISTORY VIEW ==================== -->
+  <!-- HISTORY VIEW -->
   <div id="historyView" class="view">
-    <div class="cyber-panel p-5 mb-8">
-      <h2 class="text-cyan-300 text-xl font-mono mb-3"><i class="fas fa-database"></i> FULL DATA LOG</h2>
-      <div class="overflow-x-auto" style="max-height: 500px; overflow-y: auto;">
-        <table class="data-table w-full text-sm text-gray-300">
-          <thead><tr class="border-b border-cyan-500/40 sticky top-0 bg-gray-900/90"><th>TIMESTAMP</th><th>TEMP (°C)</th><th>HUM (%)</th><th>STATUS</th> </tr></thead>
-          <tbody id="fullHistoryBody"><tr><td colspan="4" class="text-center py-6">Loading history...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-    <!-- small chart for history -->
-    <div class="cyber-panel p-5">
-      <h2 class="text-cyan-300 text-xl font-mono mb-3"><i class="fas fa-chart-line"></i> RECENT 30 READINGS</h2>
-      <canvas id="historyMiniChart" height="150"></canvas>
-    </div>
+    <div style="padding:0.5rem 0 0.75rem;"><h1 style="font-family:'Orbitron';font-size:1rem;">DATA ARCHIVE</h1><p style="font-size:0.65rem;">last 50 entries + mini chart</p></div>
+    <div class="panel panel-corners" style="padding:1rem; margin-bottom:1rem;"><div class="chart-header"><div class="chart-title"><i class="fas fa-chart-line"></i> LAST 50 READINGS TREND</div></div><canvas id="histMiniChart" height="130"></canvas></div>
+    <div class="panel panel-corners" style="padding:1rem;"><div class="chart-header"><div class="chart-title"><i class="fas fa-database"></i> FULL LOG · <span id="histCount">0</span> RECORDS</div></div><div style="max-height:420px; overflow-y:auto;"><table class="data-table"><thead><tr><th>#</th><th>TIMESTAMP</th><th>TEMP</th><th>HUM</th><th>STATUS</th></tr></thead><tbody id="fullHistBody"><tr><td colspan="5">LOADING ARCHIVE...</td></tr></tbody></table></div></div>
   </div>
 
-  <!-- ==================== SETTINGS VIEW ==================== -->
+  <!-- SETTINGS VIEW -->
   <div id="settingsView" class="view">
-    <div class="cyber-panel p-5 mb-6">
-      <h2 class="text-cyan-300 text-xl font-mono mb-4"><i class="fas fa-sliders-h"></i> SYSTEM CONFIGURATION</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="border border-cyan-500/30 p-3 rounded">
-          <h3 class="text-cyan-400">Real‑time Updates</h3>
-          <p class="text-gray-300 text-sm">Status: <span id="rtStatus" class="text-green-400">ACTIVE</span></p>
-          <p class="text-gray-400 text-xs">Data is streamed live from Supabase.</p>
-        </div>
-        <div class="border border-cyan-500/30 p-3 rounded">
-          <h3 class="text-cyan-400">ESP32 Connection</h3>
-          <p class="text-gray-300 text-sm">Sensor: <span id="sensorStatusSettings">--</span></p>
-          <p class="text-gray-400 text-xs">Last reading updates automatically.</p>
-        </div>
-        <div class="border border-cyan-500/30 p-3 rounded">
-          <h3 class="text-cyan-400">Data Retention</h3>
-          <p class="text-gray-300 text-sm">Records stored: <span id="recordCountSettings">0</span></p>
-          <p class="text-gray-400 text-xs">All data kept in Supabase.</p>
-        </div>
-        <div class="border border-cyan-500/30 p-3 rounded">
-          <h3 class="text-cyan-400">System Version</h3>
-          <p class="text-gray-300 text-sm">ROBOTRON v2.0</p>
-          <p class="text-gray-400 text-xs">© 2025 | ESP32 + Supabase</p>
-        </div>
-      </div>
+    <div style="padding:0.5rem 0 0.75rem;"><h1 style="font-family:'Orbitron';font-size:1rem;">SYSTEM CORE</h1><p style="font-size:0.65rem;">supabase integration & sensor health</p></div>
+    <div class="grid-2">
+      <div class="panel" style="padding:1rem;"><div class="chart-title"><i class="fas fa-plug"></i> BACKEND</div><div class="setting-card" style="margin-top:0.8rem;"><span style="color:#4a6a80;">URL:</span><span style="display:block;font-size:0.7rem;word-break:break-all;">https://vszeihhsgzmqadnrwckq.supabase.co</span></div><div class="setting-card mt-2"><span>REALTIME STATUS: </span><strong id="cfgRtStatus" style="color:var(--cyan);">—</strong></div></div>
+      <div class="panel" style="padding:1rem;"><div class="chart-title"><i class="fas fa-microchip"></i> SENSOR</div><div class="setting-card mt-2"><span>DEVICE: </span><strong>ESP32 + DHT11</strong></div><div class="setting-card mt-2"><span>SENSOR STATE: </span><strong id="cfgSensor">—</strong></div><div class="setting-card mt-2"><span>TOTAL RECORDS: </span><strong id="cfgRecords">0</strong></div></div>
     </div>
-    <div class="cyber-panel p-5">
-      <h2 class="text-cyan-300 text-xl font-mono mb-3"><i class="fas fa-info-circle"></i> ABOUT</h2>
-      <p class="text-gray-300 text-sm leading-relaxed">
-        This environmental dashboard collects real‑time temperature and humidity data from an ESP32 with DHT11 sensor. 
-        Data is stored in Supabase and instantly reflected on all views. The system features a live animated robotic background, 
-        real‑time charts, and full history logging. Built for midterm project.
-      </p>
-    </div>
+    <div class="panel" style="padding:1rem; margin-top:1rem;"><div class="chart-title"><i class="fas fa-info-circle"></i> ROBOTRON CORE</div><p style="font-size:0.75rem;margin-top:0.5rem;">Live environmental monitoring with automatic reconnect, real-time Postgres changes, and cross-device responsive design. Data is streamed directly from Supabase table <code>sensor_readings</code>. No page refresh needed.</p><p style="font-size:0.6rem;margin-top:0.8rem;">© 2025 · ESP32 + DHT11 · Supabase realtime engine</p></div>
   </div>
-
-  <!-- Footer -->
-  <footer class="cyber-panel rounded-none p-4 text-center text-gray-400 text-xs mt-8">
-    <div class="flex flex-wrap justify-center gap-4 mb-2">
-      <a href="#" class="hover:text-cyan-400"><i class="fab fa-github"></i> GitHub</a>
-      <a href="#" class="hover:text-cyan-400"><i class="fas fa-envelope"></i> Support</a>
-      <a href="#" class="hover:text-cyan-400"><i class="fas fa-shield-alt"></i> Security</a>
-    </div>
-    <p>© 2025 ROBOTRON ENVIRONMENTAL CORE | Powered by ESP32 + Supabase | Real‑time Environmental Intelligence</p>
-    <p class="mt-1"><i class="fas fa-microchip"></i> System v2.0 | All systems nominal</p>
-  </footer>
+  <footer style="margin-top:1.5rem; text-align:center; font-size:0.6rem; border-top:1px solid #00f5ff12; padding:1rem 0 0.2rem; color:#2a4a5a;">ROBOTRON ENVIRONMENTAL CORE · ACTIVE REAL-TIME STREAM</footer>
 </div>
 
 <script>
-  // ========== ANIMATED ROBOTIC BACKGROUND ==========
-  const canvas = document.getElementById('bg-canvas');
-  const ctx = canvas.getContext('2d');
-  let width, height;
-  let particles = [];
-  let gridSpacing = 40;
-  
-  function resizeCanvas() {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
-  }
-  function initParticles() {
-    particles = [];
-    for (let i = 0; i < 80; i++) {
-      particles.push({
-        x: Math.random() * width, y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.5) * 0.6,
-        size: Math.random() * 2 + 1, alpha: Math.random() * 0.5 + 0.2
-      });
-    }
-  }
-  function drawGrid() {
-    ctx.strokeStyle = '#00ffff20'; ctx.lineWidth = 0.5;
-    for (let x = 0; x < width; x += gridSpacing) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
-    for (let y = 0; y < height; y += gridSpacing) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
-  }
-  function drawParticles() {
-    for (let p of particles) {
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(0, 255, 255, ${p.alpha * 0.6})`; ctx.fill();
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0) p.x = width; if (p.x > width) p.x = 0;
-      if (p.y < 0) p.y = height; if (p.y > height) p.y = 0;
-    }
-  }
-  function drawPulseRings() {
-    const pulseRadius = (Date.now() * 0.002) % 100;
-    for (let i = 0; i < 3; i++) {
-      const r = (pulseRadius + i * 30) % 120;
-      ctx.beginPath(); ctx.arc(width * 0.2, height * 0.8, r, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(0, 255, 255, ${0.3 - r / 200})`; ctx.lineWidth = 1; ctx.stroke();
-      ctx.beginPath(); ctx.arc(width * 0.8, height * 0.2, r, 0, Math.PI * 2); ctx.stroke();
-    }
-  }
-  function animateBackground() {
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, width, height);
-    drawGrid(); drawParticles(); drawPulseRings();
-    requestAnimationFrame(animateBackground);
-  }
-  window.addEventListener('resize', () => { resizeCanvas(); initParticles(); });
-  resizeCanvas(); initParticles(); animateBackground();
-  
-  // ========== SUPABASE REAL‑TIME DASHBOARD ==========
-
-    // ========== SUPABASE REAL‑TIME DASHBOARD FIXED ==========
+  (function() {
+    // ---------- SUPABASE CONFIG ----------
     const SUPABASE_URL = 'https://vszeihhsgzmqadnrwckq.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzemVpaGhzZ3ptcWFkbnJ3Y2txIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MzM0OTYsImV4cCI6MjA5MDAwOTQ5Nn0.w3u5N-uRh6YZeLddDYRM1WJ2Ij-ds_Y-tDTBvlzPn40';
-    const TABLE_NAME = 'sensor_readings';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzemVpaGhzZ3ptcWFkbnJ3Y2txIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MzM0OTYsImV4cCI6MjA5MDAwOTQ5Nn0.w3u5N-uRh6YZeLddDYRM1WJ2Ij-ds_Y-tDTBvlzPn40';
+    const TABLE = 'sensor_readings';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // ✅ Correct Supabase client initialization
-    const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ---------- GLOBALS ----------
+    let allData = [];
+    let charts = { hist: null, bar: null, mini: null };
+    let prevTemp = null, prevHum = null;
+    let channelRef = null;
+    let isSubscribed = false;
 
-    // === DOM elements ===
-    const tempSpan = document.getElementById('currentTemp');
-    const humSpan = document.getElementById('currentHumidity');
-    const lastUpdateSpan = document.getElementById('lastUpdate');
-    const sensorStatusText = document.getElementById('sensorStatusText');
-    const sensorLed = document.getElementById('sensorLed');
-    const recentTableBody = document.getElementById('recentTableBody');
-    const recordCountSpan = document.getElementById('recordCount');
-    const globalStatusSpan = document.getElementById('globalStatus');
-    const minTempSpan = document.getElementById('minTemp');
-    const maxTempSpan = document.getElementById('maxTemp');
-    const avgTempSpan = document.getElementById('avgTemp');
-    const minHumSpan = document.getElementById('minHum');
-    const maxHumSpan = document.getElementById('maxHum');
-    const avgHumSpan = document.getElementById('avgHum');
-    const fullHistoryBody = document.getElementById('fullHistoryBody');
-    const sensorStatusSettings = document.getElementById('sensorStatusSettings');
-    const recordCountSettings = document.getElementById('recordCountSettings');
-    const rtStatusSpan = document.getElementById('rtStatus');
-
-    let chart, barChart, historyMiniChart = null;
-    let lastTemp = null, lastHum = null;
-    let allReadings = [];
-
-    function formatDateTime(date) { return new Date(date).toLocaleString(); }
-    function animateNumber(element, newValue) {
-      const start = parseFloat(element.innerText);
-      if (isNaN(start)) { element.innerText = newValue.toFixed(1); return; }
-      const duration = 400, stepTime = 20, steps = duration / stepTime;
-      const increment = (newValue - start) / steps;
-      let current = start, step = 0;
-      const interval = setInterval(() => {
-        step++; current += increment;
-        if (step >= steps) { element.innerText = newValue.toFixed(1); clearInterval(interval); }
-        else element.innerText = current.toFixed(1);
-      }, stepTime);
-    }
-
-    function updateCurrentDisplay(reading) {
-      if (!reading) return;
-      const newTemp = reading.temperature, newHum = reading.humidity;
-      if (lastTemp !== null && lastTemp !== newTemp) animateNumber(tempSpan, newTemp);
-      else tempSpan.innerText = newTemp.toFixed(1);
-      if (lastHum !== null && lastHum !== newHum) animateNumber(humSpan, newHum);
-      else humSpan.innerText = newHum.toFixed(1);
-      lastTemp = newTemp; lastHum = newHum;
-      lastUpdateSpan.innerText = formatDateTime(reading.created_at);
-      if (reading.sensor_ok) {
-        sensorStatusText.innerText = 'ONLINE'; sensorLed.className = 'led-green';
-        globalStatusSpan.innerText = 'ACTIVE';
-        if (sensorStatusSettings) sensorStatusSettings.innerText = 'ONLINE';
-      } else {
-        sensorStatusText.innerText = 'ERROR'; sensorLed.className = 'led-red';
-        globalStatusSpan.innerText = 'DEGRADED';
-        if (sensorStatusSettings) sensorStatusSettings.innerText = 'ERROR';
-      }
-    }
-
-    async function fetchReadings() {
-      const { data, error } = await supabase
-        .from(TABLE_NAME)
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
-      if (error) { console.error('Supabase error:', error); return []; }
-      const readings = data.reverse();
-      allReadings = readings;
-      recordCountSpan.innerText = readings.length;
-      if (recordCountSettings) recordCountSettings.innerText = readings.length;
-      return readings;
-    }
-
-    async function refreshDashboard() {
-      const readings = await fetchReadings();
-      if (readings.length) {
-        const latest = readings[readings.length - 1];
-        updateCurrentDisplay(latest);
-        // call your chart/table/stat update functions here
-      } else {
-        tempSpan.innerText = '--'; humSpan.innerText = '--'; lastUpdateSpan.innerText = '--';
-        sensorStatusText.innerText = 'OFFLINE'; sensorLed.className = 'led-red'; globalStatusSpan.innerText = 'INACTIVE';
-        if (sensorStatusSettings) sensorStatusSettings.innerText = 'OFFLINE';
-        recordCountSpan.innerText = '0'; if (recordCountSettings) recordCountSettings.innerText = '0';
-      }
-    }
-
-    function subscribeToRealtime() {
-      supabase.channel('public:' + TABLE_NAME)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE_NAME }, payload => {
-          console.log('New reading:', payload.new);
-          updateCurrentDisplay(payload.new);
-          refreshDashboard();
-        })
-        .subscribe();
-    }
-
-    // Navigation
-    const navLinks = document.querySelectorAll('[data-view]');
-    const views = {
-      dashboard: document.getElementById('dashboardView'),
-      history: document.getElementById('historyView'),
-      settings: document.getElementById('settingsView')
+    // DOM helpers
+    const $ = id => document.getElementById(id);
+    const dom = {
+      temp: $('currentTemp'), hum: $('currentHum'), lastUpd: $('lastUpdate'),
+      sensorTxt: $('sensorStatusTxt'), connBadge: $('connBadge'),
+      tempBar: $('tempBar'), humBar: $('humBar'),
+      tempTrend: $('tempTrend'), humTrend: $('humTrend'),
+      minT: $('minTemp'), maxT: $('maxTemp'), avgT: $('avgTemp'),
+      minH: $('minHum'), maxH: $('maxHum'), avgH: $('avgHum'),
+      recentBody: $('recentTableBody'), totalRecords: $('totalRecords'),
+      fullBody: $('fullHistBody'), histCount: $('histCount'),
+      cfgRt: $('cfgRtStatus'), cfgSensor: $('cfgSensor'), cfgRecords: $('cfgRecords')
     };
-    function setActiveView(viewId) {
-      Object.keys(views).forEach(id => {
-        views[id].classList.remove('active-view');
-        const link = document.querySelector(`[data-view="${id}"]`);
-        if (link) link.classList.remove('active');
-      });
-      views[viewId].classList.add('active-view');
-      const activeLink = document.querySelector(`[data-view="${viewId}"]`);
-      if (activeLink) activeLink.classList.add('active');
-      if (viewId === 'history' && allReadings.length) updateFullHistory(allReadings);
-    }
-    navLinks.forEach(link => link.addEventListener('click', () => setActiveView(link.getAttribute('data-view'))));
 
-    refreshDashboard();
-    subscribeToRealtime();
-    if (rtStatusSpan) rtStatusSpan.innerText = 'ACTIVE';
-  </script>
+    // ---------- UTILS ----------
+    function fmtDateTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return `${d.toLocaleDateString('en-PH', {month:'short',day:'2-digit'})} ${d.toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+    }
+    function fmtShortTime(iso) {
+      const d = new Date(iso);
+      return d.toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit'});
+    }
+
+    function setConnectionState(state, msg = '') {
+      const badge = dom.connBadge;
+      if (state === 'online') {
+        badge.className = 'conn-badge online';
+        badge.innerHTML = '<div class="led led-g"></div> LIVE';
+        if (dom.cfgRt) dom.cfgRt.innerText = 'ACTIVE · REALTIME';
+      } else if (state === 'offline') {
+        badge.className = 'conn-badge offline';
+        badge.innerHTML = '<div class="led led-r"></div> OFFLINE';
+        if (dom.cfgRt) dom.cfgRt.innerText = 'DISCONNECTED';
+      } else {
+        badge.className = 'conn-badge loading';
+        badge.innerHTML = '<div class="led led-y"></div> SYNC';
+        if (dom.cfgRt) dom.cfgRt.innerText = 'CONNECTING...';
+      }
+    }
+
+    function setSensorHealth(ok) {
+      if (ok) {
+        dom.sensorTxt.innerText = 'ONLINE';
+        dom.sensorTxt.style.color = '#00ff9f';
+        if (dom.cfgSensor) dom.cfgSensor.innerHTML = '<span style="color:#00ff9f;">ACTIVE ✓</span>';
+      } else {
+        dom.sensorTxt.innerText = 'ERROR';
+        dom.sensorTxt.style.color = '#ff2d55';
+        if (dom.cfgSensor) dom.cfgSensor.innerHTML = '<span style="color:#ff2d55;">FAILURE</span>';
+      }
+    }
+
+    function trendIcon(prev, curr) {
+      if (prev === null || prev === undefined) return '—';
+      if (curr > prev) return `▲ +${(curr - prev).toFixed(1)}`;
+      if (curr < prev) return `▼ −${(prev - curr).toFixed(1)}`;
+      return '▬ STABLE';
+    }
+
+    function updateCards(record) {
+      if (!record) return;
+      const t = record.temperature, h = record.humidity;
+      dom.temp.innerText = t.toFixed(1);
+      dom.hum.innerText = h.toFixed(1);
+      dom.tempTrend.innerText = trendIcon(prevTemp, t);
+      dom.humTrend.innerText = trendIcon(prevHum, h);
+      prevTemp = t; prevHum = h;
+      const tempPercent = Math.min(100, Math.max(0, (t / 50) * 100));
+      dom.tempBar.style.width = `${tempPercent}%`;
+      dom.humBar.style.width = `${Math.min(100, Math.max(0, h))}%`;
+      dom.lastUpd.innerText = fmtDateTime(record.created_at);
+      setSensorHealth(record.sensor_ok === true);
+    }
+
+    function updateStats(data) {
+      if (!data.length) return;
+      const temps = data.map(r => r.temperature);
+      const hums = data.map(r => r.humidity);
+      dom.minT.innerText = Math.min(...temps).toFixed(1); dom.maxT.innerText = Math.max(...temps).toFixed(1); dom.avgT.innerText = (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1);
+      dom.minH.innerText = Math.min(...hums).toFixed(1); dom.maxH.innerText = Math.max(...hums).toFixed(1); dom.avgH.innerText = (hums.reduce((a,b)=>a+b,0)/hums.length).toFixed(1);
+    }
+
+    function updateRecentTable(data) {
+      const last10 = [...data].reverse().slice(0,10);
+      if (!last10.length) { dom.recentBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">NO DATA YET</td></tr>'; return; }
+      dom.recentBody.innerHTML = last10.map((r, idx) => `
+        <tr>
+          <td style="color:#3a5a70;">${data.length - idx}</td>
+          <td>${fmtDateTime(r.created_at)}</td>
+          <td style="color:#ff9060;">${r.temperature.toFixed(1)}</td>
+          <td style="color:#60aaff;">${r.humidity.toFixed(1)}</td>
+          <td><span class="badge ${r.sensor_ok ? 'badge-ok' : 'badge-err'}"><div class="led ${r.sensor_ok ? 'led-g' : 'led-r'}" style="width:6px;height:6px;"></div> ${r.sensor_ok ? 'OK' : 'ERR'}</span></td>
+        </tr>`).join('');
+      dom.totalRecords.innerText = data.length;
+      if (dom.cfgRecords) dom.cfgRecords.innerText = data.length;
+    }
+
+    function updateFullHistory(data) {
+      const rev = [...data].reverse();
+      dom.histCount.innerText = rev.length;
+      if (!rev.length) { dom.fullBody.innerHTML = '<tr><td colspan="5">NO RECORDS</td></tr>'; return; }
+      dom.fullBody.innerHTML = rev.slice(0,200).map((r, i) => `
+        <tr><td style="color:#3a5a70;">${rev.length - i}</td><td>${fmtDateTime(r.created_at)}</td><td>${r.temperature.toFixed(1)} °C</td><td>${r.humidity.toFixed(1)} %</td><td><span class="badge ${r.sensor_ok ? 'badge-ok' : 'badge-err'}">${r.sensor_ok ? 'OK' : 'ERR'}</span></td></tr>`).join('');
+    }
+
+    // ---------- CHARTS ----------
+    function destroyChart(chartInstance) { if (chartInstance) { chartInstance.destroy(); } return null; }
+    function renderHistoryChart(data) {
+      const last60 = data.slice(-60);
+      const labels = last60.map(r => fmtShortTime(r.created_at));
+      const temps = last60.map(r => r.temperature);
+      const hums = last60.map(r => r.humidity);
+      const ctx = document.getElementById('historyChart')?.getContext('2d');
+      if (!ctx) return;
+      if (charts.hist) charts.hist.destroy();
+      charts.hist = new Chart(ctx, {
+        type: 'line', data: { labels, datasets: [
+          { label: 'Temp °C', data: temps, borderColor: '#ff6b35', backgroundColor: '#ff6b3510', borderWidth: 1.8, pointRadius: 0, tension: 0.3, fill: true, yAxisID: 'y' },
+          { label: 'Hum %', data: hums, borderColor: '#00aaff', backgroundColor: '#00aaff08', borderWidth: 1.8, pointRadius: 0, tension: 0.3, fill: true, yAxisID: 'y2' }
+        ] }, options: { responsive: true, maintainAspectRatio: true, scales: { y: { grid: { color: '#00f5ff10' }, title: { display: true, text: '°C', color: '#ff6b35' } }, y2: { position: 'right', grid: { display: false }, title: { text: '%', color: '#00aaff' } } }, plugins: { legend: { display: false }, tooltip: { mode: 'index' } } }
+      });
+    }
+    function renderBarChart(data) {
+      const byDay = {};
+      data.forEach(r => { const d = new Date(r.created_at).toLocaleDateString('en-PH',{month:'short',day:'2-digit'}); if(!byDay[d]) byDay[d]={t:[],h:[]}; byDay[d].t.push(r.temperature); byDay[d].h.push(r.humidity); });
+      const days = Object.keys(byDay).slice(-7);
+      const avgT = days.map(d => byDay[d].t.reduce((a,b)=>a+b,0)/byDay[d].t.length);
+      const avgH = days.map(d => byDay[d].h.reduce((a,b)=>a+b,0)/byDay[d].h.length);
+      const ctx = document.getElementById('barChart')?.getContext('2d');
+      if (!ctx) return;
+      if (charts.bar) charts.bar.destroy();
+      charts.bar = new Chart(ctx, { type: 'bar', data: { labels: days, datasets: [{ label: 'Avg Temp', data: avgT, backgroundColor: '#ff6b3570', borderRadius: 3, yAxisID: 'y' }, { label: 'Avg Hum', data: avgH, backgroundColor: '#00aaff70', borderRadius: 3, yAxisID: 'y2' }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#00f5ff10' } }, y2: { position: 'right', grid: { display: false } } } } });
+    }
+    function renderMiniChart(data) {
+      const last50 = data.slice(-50);
+      const ctx = document.getElementById('histMiniChart')?.getContext('2d');
+      if (!ctx) return;
+      if (charts.mini) charts.mini.destroy();
+      charts.mini = new Chart(ctx, { type: 'line', data: { labels: last50.map(r => fmtShortTime(r.created_at)), datasets: [{ label: 'Temp', data: last50.map(r=>r.temperature), borderColor: '#ff6b35', borderWidth: 1.5, pointRadius: 1.5, tension: 0.2 }, { label: 'Hum', data: last50.map(r=>r.humidity), borderColor: '#00aaff', borderWidth: 1.5, pointRadius: 1.5, tension: 0.2 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } } });
+    }
+
+    // ---------- FETCH + REFRESH ----------
+    async function fetchAllData() {
+      try {
+        const { data, error } = await sb.from(TABLE).select('*').order('created_at', { ascending: true }).limit(800);
+        if (error) throw error;
+        if (data) allData = data;
+        setConnectionState('online');
+        return data || [];
+      } catch (err) {
+        console.error('fetch error:', err);
+        setConnectionState('offline');
+        return [];
+      }
+    }
+
+    async function fullRefresh() {
+      const data = await fetchAllData();
+      if (!data.length) {
+        dom.temp.innerText = '—'; dom.hum.innerText = '—';
+        setSensorHealth(false);
+        return;
+      }
+      const latest = data[data.length - 1];
+      updateCards(latest);
+      updateStats(data);
+      updateRecentTable(data);
+      renderHistoryChart(data);
+      renderBarChart(data);
+      if (document.getElementById('historyView').classList.contains('active')) {
+        updateFullHistory(data);
+        renderMiniChart(data);
+      }
+    }
+
+    // ---------- REALTIME SUBSCRIPTION (auto reconnection) ----------
+    function setupRealtimeSubscription() {
+      if (channelRef) {
+        try { sb.removeChannel(channelRef); } catch(e) {}
+        channelRef = null;
+      }
+      const channel = sb.channel('robotron-live-reliable');
+      channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE }, (payload) => {
+        if (payload.new) {
+          allData = [...allData, payload.new];
+          updateCards(payload.new);
+          updateStats(allData);
+          updateRecentTable(allData);
+          renderHistoryChart(allData);
+          renderBarChart(allData);
+          if (document.getElementById('historyView').classList.contains('active')) {
+            updateFullHistory(allData);
+            renderMiniChart(allData);
+          }
+          setConnectionState('online');
+        }
+      }).subscribe((status) => {
+        if (status === 'SUBSCRIBED') { setConnectionState('online'); isSubscribed = true; }
+        else if (status === 'CHANNEL_ERROR') { setConnectionState('offline'); setTimeout(() => { if (!isSubscribed) setupRealtimeSubscription(); }, 5000); }
+      });
+      channelRef = channel;
+    }
+
+    // ---------- MANUAL REFRESH ----------
+    document.getElementById('manualRefreshBtn')?.addEventListener('click', async () => {
+      await fullRefresh();
+    });
+
+    // ---------- NAVIGATION ----------
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const viewId = btn.dataset.view + 'View';
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+        if (btn.dataset.view === 'history' && allData.length) {
+          updateFullHistory(allData);
+          renderMiniChart(allData);
+        }
+      });
+    });
+
+    // ---------- BACKGROUND ANIMATION (performance optimized) ----------
+    (function bgAnimation() {
+      const canvas = document.getElementById('bg-canvas');
+      let ctx = canvas.getContext('2d');
+      let w, h, particles = [];
+      function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+      function initParticles() { particles = Array.from({ length: 55 }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35, r: Math.random() * 1.5 + 0.8 })); }
+      function animate() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#030508'; ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#00f5ff10'; ctx.lineWidth = 0.5;
+        for (let i = 0; i < w; i += 60) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
+        for (let i = 0; i < h; i += 60) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke(); }
+        for (let p of particles) {
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,245,255,0.35)'; ctx.fill();
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0) p.x = w; if (p.x > w) p.x = 0; if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+        }
+        requestAnimationFrame(animate);
+      }
+      window.addEventListener('resize', () => { resize(); initParticles(); });
+      resize(); initParticles(); animate();
+    })();
+
+    // ---------- BOOT ----------
+    window.addEventListener('load', async () => {
+      const overlay = document.getElementById('loadOverlay');
+      await fullRefresh();
+      setupRealtimeSubscription();
+      setTimeout(() => { overlay.classList.add('hide'); setTimeout(() => overlay.remove(), 500); }, 1000);
+    });
+  })();
+</script>
 </body>
 </html>
