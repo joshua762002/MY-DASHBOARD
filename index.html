@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+  <title>ROBOTRON | Environmental Core</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+    * { font-family: 'Share Tech Mono', monospace; margin: 0; padding: 0; box-sizing: border-box; }
+    
+    /* Canvas background – live robotic animation */
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: #05070c;
+    }
+    
+    .content {
+      position: relative;
+      z-index: 10;
+      padding: 1rem;
+    }
+    
+    /* Robotic panel */
+    .cyber-panel {
+      background: rgba(10, 14, 23, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid #00ffff30;
+      border-radius: 0px;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.2), inset 0 0 5px rgba(0, 255, 255, 0.1);
+      transition: all 0.2s ease;
+    }
+    .cyber-panel:hover {
+      border-color: #00ffff;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+    }
+    
+    /* Digital readout */
+    .digital-number {
+      text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff80;
+      letter-spacing: 2px;
+    }
+    
+    /* LED indicators */
+    .led-red {
+      width: 12px;
+      height: 12px;
+      background: #ff3300;
+      border-radius: 50%;
+      box-shadow: 0 0 6px #ff3300;
+      animation: pulseRed 1.2s infinite;
+    }
+    .led-green {
+      width: 12px;
+      height: 12px;
+      background: #00ffaa;
+      border-radius: 50%;
+      box-shadow: 0 0 6px #00ffaa;
+      animation: pulseGreen 1s infinite;
+    }
+    @keyframes pulseRed {
+      0% { opacity: 0.4; transform: scale(0.8);}
+      100% { opacity: 1; transform: scale(1.2);}
+    }
+    @keyframes pulseGreen {
+      0% { opacity: 0.5; transform: scale(0.8);}
+      100% { opacity: 1; transform: scale(1.2);}
+    }
+    
+    /* Scanning line for chart */
+    .scan-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, #00ffff00, #00ffff, #00ffff00);
+      animation: scanMove 3s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes scanMove {
+      0% { left: 0%; opacity: 0.8; }
+      100% { left: 100%; opacity: 0; }
+    }
+    
+    /* Table styling */
+    .data-table th, .data-table td {
+      border-bottom: 1px solid #00ffff30;
+      padding: 12px 8px;
+      text-align: left;
+    }
+    .data-table tr:hover {
+      background: #00ffff10;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1e1f2a; }
+    ::-webkit-scrollbar-thumb { background: #00ffff; border-radius: 3px; }
+
+    /* Navbar link styling */
+    .nav-link {
+      transition: color 0.2s, text-shadow 0.2s;
+      cursor: pointer;
+    }
+    .nav-link:hover {
+      color: #00ffff;
+      text-shadow: 0 0 5px #00ffff;
+    }
+    .nav-link.active {
+      color: #00ffff;
+      text-shadow: 0 0 5px #00ffff;
+      border-bottom: 1px solid #00ffff;
+    }
+    /* View containers */
+    .view {
+      display: none;
+    }
+    .view.active-view {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="content max-w-7xl mx-auto">
+  <!-- Navbar -->
+  <nav class="cyber-panel rounded-none px-4 py-3 mb-6 flex flex-wrap justify-between items-center">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-microchip text-cyan-400 text-2xl"></i>
+      <span class="text-white text-xl font-bold tracking-wider">ROBOTRON::CORE</span>
+    </div>
+    <div class="flex gap-6 text-sm md:text-base">
+      <a data-view="dashboard" class="nav-link active text-gray-300"><i class="fas fa-chart-line"></i> Dashboard</a>
+      <a data-view="history" class="nav-link text-gray-300"><i class="fas fa-history"></i> History</a>
+      <a data-view="settings" class="nav-link text-gray-300"><i class="fas fa-cog"></i> Settings</a>
+    </div>
+  </nav>
+
+  <!-- Header (common) -->
+  <div class="text-center mb-8">
+    <div class="cyber-panel inline-block px-6 py-2">
+      <h1 class="text-3xl md:text-4xl font-bold tracking-wider bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+        <i class="fas fa-microchip mr-2"></i> ENVIRONMENTAL CORE
+      </h1>
+    </div>
+    <p class="text-cyan-300 text-sm mt-3 font-mono">SYSTEM STATUS: <span id="globalStatus" class="text-green-400">ACTIVE</span> | REAL‑TIME DATA STREAM</p>
+  </div>
+
+  <!-- ==================== DASHBOARD VIEW ==================== -->
+  <div id="dashboardView" class="view active-view">
+    <!-- Sensor Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div class="cyber-panel p-5 relative">
+        <div class="absolute top-2 right-2 text-cyan-400"><i class="fas fa-microchip"></i></div>
+        <div class="flex items-center gap-3 mb-4">
+          <i class="fas fa-temperature-high text-3xl text-red-500"></i>
+          <h2 class="text-cyan-300 text-xl font-mono">TEMP_MODULE</h2>
+        </div>
+        <div class="text-center">
+          <span id="currentTemp" class="text-7xl font-bold text-white digital-number">--</span>
+          <span class="text-2xl text-cyan-300">°C</span>
+        </div>
+        <div class="mt-3 flex justify-between text-xs text-gray-400 border-t border-cyan-500/30 pt-2">
+          <span><i class="far fa-clock"></i> LAST_READ: <span id="lastUpdate" class="font-mono">--</span></span>
+        </div>
+      </div>
+      <div class="cyber-panel p-5 relative">
+        <div class="absolute top-2 right-2 text-cyan-400"><i class="fas fa-microchip"></i></div>
+        <div class="flex items-center gap-3 mb-4">
+          <i class="fas fa-tint text-3xl text-blue-400"></i>
+          <h2 class="text-cyan-300 text-xl font-mono">HUMID_MODULE</h2>
+        </div>
+        <div class="text-center">
+          <span id="currentHumidity" class="text-7xl font-bold text-white digital-number">--</span>
+          <span class="text-2xl text-cyan-300">%</span>
+        </div>
+        <div class="mt-3 flex justify-between items-center border-t border-cyan-500/30 pt-2">
+          <span class="text-xs text-gray-400"><i class="fas fa-microchip"></i> SENSOR: <span id="sensorStatusText">INIT</span></span>
+          <div id="sensorLed" class="led-red"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">MIN TEMP</div><div class="text-2xl font-bold text-white"><span id="minTemp">--</span> °C</div></div>
+      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">MAX TEMP</div><div class="text-2xl font-bold text-white"><span id="maxTemp">--</span> °C</div></div>
+      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">AVG TEMP</div><div class="text-2xl font-bold text-white"><span id="avgTemp">--</span> °C</div></div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">MIN HUM</div><div class="text-2xl font-bold text-white"><span id="minHum">--</span> %</div></div>
+      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">MAX HUM</div><div class="text-2xl font-bold text-white"><span id="maxHum">--</span> %</div></div>
+      <div class="cyber-panel p-3 text-center"><div class="text-xs text-gray-400">AVG HUM</div><div class="text-2xl font-bold text-white"><span id="avgHum">--</span> %</div></div>
+    </div>
+
+    <!-- Dual Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="cyber-panel p-5 relative">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-cyan-300 text-xl font-mono"><i class="fas fa-chart-line"></i> TELEMETRY_HISTORY [24H]</h2>
+          <div class="flex gap-3 text-xs"><span class="text-red-400">TEMP</span><span class="text-blue-400">HUM</span></div>
+        </div>
+        <div class="relative"><canvas id="historyChart" height="180"></canvas><div class="scan-line"></div></div>
+      </div>
+      <div class="cyber-panel p-5">
+        <div class="flex justify-between items-center mb-4"><h2 class="text-cyan-300 text-xl font-mono"><i class="fas fa-chart-bar"></i> DAILY_AVG [7D]</h2></div>
+        <canvas id="dailyBarChart" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- Recent Table -->
+    <div class="cyber-panel p-5 overflow-hidden mb-8">
+      <h2 class="text-cyan-300 text-xl font-mono mb-3"><i class="fas fa-database"></i> DATA_LOG (last 10)</h2>
+      <div class="overflow-x-auto">
+        <table class="data-table w-full text-sm text-gray-300">
+          <thead><tr class="border-b border-cyan-500/40"><th>TIMESTAMP</th><th>TEMP (°C)</th><th>HUM (%)</th><th>STATUS</th> </tr></thead>
+          <tbody id="recentTableBody"><tr><td colspan="4" class="text-center py-6">AWAITING DATA FEED...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="mt-3 text-right text-cyan-400 text-xs"><i class="fas fa-sync-alt fa-fw"></i> REAL‑TIME SYNC | <span id="recordCount">0</span> RECORDS</div>
+    </div>
+  </div>
+
+  <!-- ==================== HISTORY VIEW ==================== -->
+  <div id="historyView" class="view">
+    <div class="cyber-panel p-5 mb-8">
+      <h2 class="text-cyan-300 text-xl font-mono mb-3"><i class="fas fa-database"></i> FULL DATA LOG</h2>
+      <div class="overflow-x-auto" style="max-height: 500px; overflow-y: auto;">
+        <table class="data-table w-full text-sm text-gray-300">
+          <thead><tr class="border-b border-cyan-500/40 sticky top-0 bg-gray-900/90"><th>TIMESTAMP</th><th>TEMP (°C)</th><th>HUM (%)</th><th>STATUS</th> </tr></thead>
+          <tbody id="fullHistoryBody"><tr><td colspan="4" class="text-center py-6">Loading history...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- small chart for history -->
+    <div class="cyber-panel p-5">
+      <h2 class="text-cyan-300 text-xl font-mono mb-3"><i class="fas fa-chart-line"></i> RECENT 30 READINGS</h2>
+      <canvas id="historyMiniChart" height="150"></canvas>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS VIEW ==================== -->
+  <div id="settingsView" class="view">
+    <div class="cyber-panel p-5 mb-6">
+      <h2 class="text-cyan-300 text-xl font-mono mb-4"><i class="fas fa-sliders-h"></i> SYSTEM CONFIGURATION</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="border border-cyan-500/30 p-3 rounded">
+          <h3 class="text-cyan-400">Real‑time Updates</h3>
+          <p class="text-gray-300 text-sm">Status: <span id="rtStatus" class="text-green-400">ACTIVE</span></p>
+          <p class="text-gray-400 text-xs">Data is streamed live from Supabase.</p>
+        </div>
+        <div class="border border-cyan-500/30 p-3 rounded">
+          <h3 class="text-cyan-400">ESP32 Connection</h3>
+          <p class="text-gray-300 text-sm">Sensor: <span id="sensorStatusSettings">--</span></p>
+          <p class="text-gray-400 text-xs">Last reading updates automatically.</p>
+        </div>
+        <div class="border border-cyan-500/30 p-3 rounded">
+          <h3 class="text-cyan-400">Data Retention</h3>
+          <p class="text-gray-300 text-sm">Records stored: <span id="recordCountSettings">0</span></p>
+          <p class="text-gray-400 text-xs">All data kept in Supabase.</p>
+        </div>
+        <div class="border border-cyan-500/30 p-3 rounded">
+          <h3 class="text-cyan-400">System Version</h3>
+          <p class="text-gray-300 text-sm">ROBOTRON v2.0</p>
+          <p class="text-gray-400 text-xs">© 2025 | ESP32 + Supabase</p>
+        </div>
+      </div>
+    </div>
+    <div class="cyber-panel p-5">
+      <h2 class="text-cyan-300 text-xl font-mono mb-3"><i class="fas fa-info-circle"></i> ABOUT</h2>
+      <p class="text-gray-300 text-sm leading-relaxed">
+        This environmental dashboard collects real‑time temperature and humidity data from an ESP32 with DHT11 sensor. 
+        Data is stored in Supabase and instantly reflected on all views. The system features a live animated robotic background, 
+        real‑time charts, and full history logging. Built for midterm project.
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="cyber-panel rounded-none p-4 text-center text-gray-400 text-xs mt-8">
+    <div class="flex flex-wrap justify-center gap-4 mb-2">
+      <a href="#" class="hover:text-cyan-400"><i class="fab fa-github"></i> GitHub</a>
+      <a href="#" class="hover:text-cyan-400"><i class="fas fa-envelope"></i> Support</a>
+      <a href="#" class="hover:text-cyan-400"><i class="fas fa-shield-alt"></i> Security</a>
+    </div>
+    <p>© 2025 ROBOTRON ENVIRONMENTAL CORE | Powered by ESP32 + Supabase | Real‑time Environmental Intelligence</p>
+    <p class="mt-1"><i class="fas fa-microchip"></i> System v2.0 | All systems nominal</p>
+  </footer>
+</div>
+
+<script>
+  // ========== ANIMATED ROBOTIC BACKGROUND ==========
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  let particles = [];
+  let gridSpacing = 40;
+  
+  function resizeCanvas() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+  function initParticles() {
+    particles = [];
+    for (let i = 0; i < 80; i++) {
+      particles.push({
+        x: Math.random() * width, y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.5) * 0.6,
+        size: Math.random() * 2 + 1, alpha: Math.random() * 0.5 + 0.2
+      });
+    }
+  }
+  function drawGrid() {
+    ctx.strokeStyle = '#00ffff20'; ctx.lineWidth = 0.5;
+    for (let x = 0; x < width; x += gridSpacing) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+    for (let y = 0; y < height; y += gridSpacing) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
+  }
+  function drawParticles() {
+    for (let p of particles) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 255, 255, ${p.alpha * 0.6})`; ctx.fill();
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = width; if (p.x > width) p.x = 0;
+      if (p.y < 0) p.y = height; if (p.y > height) p.y = 0;
+    }
+  }
+  function drawPulseRings() {
+    const pulseRadius = (Date.now() * 0.002) % 100;
+    for (let i = 0; i < 3; i++) {
+      const r = (pulseRadius + i * 30) % 120;
+      ctx.beginPath(); ctx.arc(width * 0.2, height * 0.8, r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0, 255, 255, ${0.3 - r / 200})`; ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); ctx.arc(width * 0.8, height * 0.2, r, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  function animateBackground() {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, width, height);
+    drawGrid(); drawParticles(); drawPulseRings();
+    requestAnimationFrame(animateBackground);
+  }
+  window.addEventListener('resize', () => { resizeCanvas(); initParticles(); });
+  resizeCanvas(); initParticles(); animateBackground();
+  
+  // ========== SUPABASE REAL‑TIME DASHBOARD ==========
+
+    // ========== SUPABASE REAL‑TIME DASHBOARD FIXED ==========
+    const SUPABASE_URL = 'https://vszeihhsgzmqadnrwckq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzemVpaGhzZ3ptcWFkbnJ3Y2txIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MzM0OTYsImV4cCI6MjA5MDAwOTQ5Nn0.w3u5N-uRh6YZeLddDYRM1WJ2Ij-ds_Y-tDTBvlzPn40';
+    const TABLE_NAME = 'sensor_readings';
+
+    // ✅ Correct Supabase client initialization
+    const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // === DOM elements ===
+    const tempSpan = document.getElementById('currentTemp');
+    const humSpan = document.getElementById('currentHumidity');
+    const lastUpdateSpan = document.getElementById('lastUpdate');
+    const sensorStatusText = document.getElementById('sensorStatusText');
+    const sensorLed = document.getElementById('sensorLed');
+    const recentTableBody = document.getElementById('recentTableBody');
+    const recordCountSpan = document.getElementById('recordCount');
+    const globalStatusSpan = document.getElementById('globalStatus');
+    const minTempSpan = document.getElementById('minTemp');
+    const maxTempSpan = document.getElementById('maxTemp');
+    const avgTempSpan = document.getElementById('avgTemp');
+    const minHumSpan = document.getElementById('minHum');
+    const maxHumSpan = document.getElementById('maxHum');
+    const avgHumSpan = document.getElementById('avgHum');
+    const fullHistoryBody = document.getElementById('fullHistoryBody');
+    const sensorStatusSettings = document.getElementById('sensorStatusSettings');
+    const recordCountSettings = document.getElementById('recordCountSettings');
+    const rtStatusSpan = document.getElementById('rtStatus');
+
+    let chart, barChart, historyMiniChart = null;
+    let lastTemp = null, lastHum = null;
+    let allReadings = [];
+
+    function formatDateTime(date) { return new Date(date).toLocaleString(); }
+    function animateNumber(element, newValue) {
+      const start = parseFloat(element.innerText);
+      if (isNaN(start)) { element.innerText = newValue.toFixed(1); return; }
+      const duration = 400, stepTime = 20, steps = duration / stepTime;
+      const increment = (newValue - start) / steps;
+      let current = start, step = 0;
+      const interval = setInterval(() => {
+        step++; current += increment;
+        if (step >= steps) { element.innerText = newValue.toFixed(1); clearInterval(interval); }
+        else element.innerText = current.toFixed(1);
+      }, stepTime);
+    }
+
+    function updateCurrentDisplay(reading) {
+      if (!reading) return;
+      const newTemp = reading.temperature, newHum = reading.humidity;
+      if (lastTemp !== null && lastTemp !== newTemp) animateNumber(tempSpan, newTemp);
+      else tempSpan.innerText = newTemp.toFixed(1);
+      if (lastHum !== null && lastHum !== newHum) animateNumber(humSpan, newHum);
+      else humSpan.innerText = newHum.toFixed(1);
+      lastTemp = newTemp; lastHum = newHum;
+      lastUpdateSpan.innerText = formatDateTime(reading.created_at);
+      if (reading.sensor_ok) {
+        sensorStatusText.innerText = 'ONLINE'; sensorLed.className = 'led-green';
+        globalStatusSpan.innerText = 'ACTIVE';
+        if (sensorStatusSettings) sensorStatusSettings.innerText = 'ONLINE';
+      } else {
+        sensorStatusText.innerText = 'ERROR'; sensorLed.className = 'led-red';
+        globalStatusSpan.innerText = 'DEGRADED';
+        if (sensorStatusSettings) sensorStatusSettings.innerText = 'ERROR';
+      }
+    }
+
+    async function fetchReadings() {
+      const { data, error } = await supabase
+        .from(TABLE_NAME)
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) { console.error('Supabase error:', error); return []; }
+      const readings = data.reverse();
+      allReadings = readings;
+      recordCountSpan.innerText = readings.length;
+      if (recordCountSettings) recordCountSettings.innerText = readings.length;
+      return readings;
+    }
+
+    async function refreshDashboard() {
+      const readings = await fetchReadings();
+      if (readings.length) {
+        const latest = readings[readings.length - 1];
+        updateCurrentDisplay(latest);
+        // call your chart/table/stat update functions here
+      } else {
+        tempSpan.innerText = '--'; humSpan.innerText = '--'; lastUpdateSpan.innerText = '--';
+        sensorStatusText.innerText = 'OFFLINE'; sensorLed.className = 'led-red'; globalStatusSpan.innerText = 'INACTIVE';
+        if (sensorStatusSettings) sensorStatusSettings.innerText = 'OFFLINE';
+        recordCountSpan.innerText = '0'; if (recordCountSettings) recordCountSettings.innerText = '0';
+      }
+    }
+
+    function subscribeToRealtime() {
+      supabase.channel('public:' + TABLE_NAME)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE_NAME }, payload => {
+          console.log('New reading:', payload.new);
+          updateCurrentDisplay(payload.new);
+          refreshDashboard();
+        })
+        .subscribe();
+    }
+
+    // Navigation
+    const navLinks = document.querySelectorAll('[data-view]');
+    const views = {
+      dashboard: document.getElementById('dashboardView'),
+      history: document.getElementById('historyView'),
+      settings: document.getElementById('settingsView')
+    };
+    function setActiveView(viewId) {
+      Object.keys(views).forEach(id => {
+        views[id].classList.remove('active-view');
+        const link = document.querySelector(`[data-view="${id}"]`);
+        if (link) link.classList.remove('active');
+      });
+      views[viewId].classList.add('active-view');
+      const activeLink = document.querySelector(`[data-view="${viewId}"]`);
+      if (activeLink) activeLink.classList.add('active');
+      if (viewId === 'history' && allReadings.length) updateFullHistory(allReadings);
+    }
+    navLinks.forEach(link => link.addEventListener('click', () => setActiveView(link.getAttribute('data-view'))));
+
+    refreshDashboard();
+    subscribeToRealtime();
+    if (rtStatusSpan) rtStatusSpan.innerText = 'ACTIVE';
+  </script>
+</body>
+</html>
