@@ -1,931 +1,1534 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
-  <title>ROBOTRON | Environmental Core · Real‑time Sentinel</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    :root {
-      --cyan: #00f5ff;
-      --cyan-dim: #00f5ff30;
-      --cyan-glow: 0 0 12px #00f5ff80;
-      --orange: #ff6b35;
-      --green: #00ff9f;
-      --red: #ff2d55;
-      --bg: #030508;
-      --panel: rgba(8, 12, 20, 0.86);
-    }
-
-    body {
-      font-family: 'Share Tech Mono', monospace;
-      background: var(--bg);
-      color: #c8d8e8;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* animated canvas background */
-    #bg-canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    .shell {
-      position: relative;
-      z-index: 10;
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 1rem 1rem 1.5rem;
-    }
-
-    /* glass panels */
-    .panel {
-      background: var(--panel);
-      backdrop-filter: blur(14px);
-      border: 1px solid var(--cyan-dim);
-      border-radius: 2px;
-      box-shadow: 0 0 0 1px #ffffff04, inset 0 1px 0 #ffffff08;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      position: relative;
-    }
-
-    .panel::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-      opacity: 0.5;
-    }
-
-    .panel:hover {
-      border-color: #00f5ff70;
-      box-shadow: var(--cyan-glow);
-    }
-
-    /* corner accent */
-    .panel-corners::after,
-    .panel-corners::before {
-      content: '';
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      border-color: var(--cyan);
-      border-style: solid;
-      opacity: 0.7;
-    }
-
-    .panel-corners::before {
-      top: -1px;
-      left: -1px;
-      border-width: 1px 0 0 1px;
-    }
-
-    .panel-corners::after {
-      bottom: -1px;
-      right: -1px;
-      border-width: 0 1px 1px 0;
-    }
-
-    /* navbar */
-    nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      padding: 0.75rem 1.25rem;
-      background: rgba(3, 5, 8, 0.94);
-      border-bottom: 1px solid var(--cyan-dim);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(20px);
-    }
-
-    .brand {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 1rem;
-      letter-spacing: 0.1em;
-      color: var(--cyan);
-      text-shadow: var(--cyan-glow);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .brand i {
-      font-size: 1.3rem;
-    }
-
-    .brand .sub {
-      font-size: 0.6rem;
-      color: #5580a0;
-      letter-spacing: 0.2em;
-      display: block;
-      margin-top: 0.1rem;
-    }
-
-    .nav-tabs {
-      display: flex;
-      gap: 0.25rem;
-      flex-wrap: wrap;
-    }
-
-    .nav-tab {
-      padding: 0.4rem 1rem;
-      font-size: 0.75rem;
-      letter-spacing: 0.08em;
-      color: #7090a0;
-      border: 1px solid transparent;
-      border-radius: 2px;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: transparent;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .nav-tab:hover {
-      color: var(--cyan);
-      border-color: var(--cyan-dim);
-    }
-
-    .nav-tab.active {
-      color: var(--cyan);
-      border-color: var(--cyan);
-      background: #00f5ff10;
-      text-shadow: 0 0 8px var(--cyan);
-    }
-
-    .conn-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.7rem;
-      padding: 0.3rem 0.85rem;
-      border: 1px solid;
-      border-radius: 2px;
-      background: #03050880;
-    }
-
-    .conn-badge.online {
-      border-color: var(--green);
-      color: var(--green);
-    }
-
-    .conn-badge.offline {
-      border-color: var(--red);
-      color: var(--red);
-    }
-
-    .conn-badge.loading {
-      border-color: #f0a300;
-      color: #f0a300;
-    }
-
-    /* metric cards */
-    .metric-card {
-      padding: 1.2rem;
-    }
-
-    .metric-label {
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      color: #5580a0;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .metric-value {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 3.8rem;
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -0.02em;
-    }
-
-    @media (min-width: 640px) {
-      .metric-value {
-        font-size: 4.5rem;
-      }
-    }
-
-    .metric-unit {
-      font-size: 1.2rem;
-      margin-left: 0.2rem;
-      opacity: 0.7;
-    }
-
-    .progress-bar {
-      height: 3px;
-      background: #00f5ff20;
-      border-radius: 2px;
-      margin-top: 0.65rem;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      transition: width 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-    }
-
-    .stat-pill {
-      padding: 0.75rem 0.5rem;
-      text-align: center;
-    }
-
-    .stat-pill .label {
-      font-size: 0.6rem;
-      letter-spacing: 0.18em;
-      color: #4a6a80;
-    }
-
-    .stat-pill .value {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #e0f0ff;
-    }
-
-    /* charts */
-    .chart-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .chart-title {
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      color: var(--cyan);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    /* table responsive */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.75rem;
-    }
-
-    .data-table thead tr {
-      border-bottom: 1px solid var(--cyan-dim);
-    }
-
-    .data-table th {
-      padding: 0.6rem 0.5rem;
-      font-size: 0.62rem;
-      letter-spacing: 0.12em;
-      color: #4a6a80;
-      text-align: left;
-      font-weight: normal;
-    }
-
-    .data-table td {
-      padding: 0.65rem 0.5rem;
-      border-bottom: 1px solid #ffffff08;
-      color: #b0c8d8;
-      word-break: break-word;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      padding: 0.2rem 0.55rem;
-      border-radius: 2px;
-      font-size: 0.62rem;
-    }
-
-    .badge-ok {
-      background: #00ff9f12;
-      border: 1px solid #00ff9f40;
-      color: var(--green);
-    }
-
-    .badge-err {
-      background: #ff2d5512;
-      border: 1px solid #ff2d5540;
-      color: var(--red);
-    }
-
-    /* LED */
-    .led {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .led-g {
-      background: var(--green);
-      box-shadow: 0 0 8px var(--green);
-      animation: pulse 1.4s infinite alternate;
-    }
-
-    .led-r {
-      background: var(--red);
-      box-shadow: 0 0 8px var(--red);
-      animation: pulse 1s infinite alternate;
-    }
-
-    .led-y {
-      background: #f0a300;
-      box-shadow: 0 0 8px #f0a300;
-      animation: pulse 1.6s infinite alternate;
-    }
-
-    @keyframes pulse {
-      from {
-        opacity: 0.5;
-        transform: scale(0.8);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1.15);
-      }
-    }
-
-    /* views */
-    .view {
-      display: none;
-    }
-
-    .view.active {
-      display: block;
-      animation: fadeIn 0.25s ease;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(5px);
-      }
-      to {
-        opacity: 1;
-        transform: none;
-      }
-    }
-
-    /* responsive grid */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-    }
-
-    .grid-2-charts {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1rem;
-    }
-
-    .section-divider {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin: 1.2rem 0 0.8rem;
-    }
-
-    .section-divider .line {
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(90deg, var(--cyan-dim), transparent);
-    }
-
-    .section-divider .label {
-      font-size: 0.6rem;
-      letter-spacing: 0.2em;
-      color: #3a5a70;
-    }
-
-    /* scroll */
-    ::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #0a0e16;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #00f5ff40;
-      border-radius: 3px;
-    }
-
-    /* loading overlay */
-    #loadOverlay {
-      position: fixed;
-      inset: 0;
-      background: #030508;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      transition: opacity 0.5s;
-    }
-
-    #loadOverlay.hide {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .load-logo {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 2rem;
-      font-weight: 900;
-      color: var(--cyan);
-      text-shadow: var(--cyan-glow);
-    }
-
-    .load-bar-track {
-      width: 220px;
-      height: 2px;
-      background: #00f5ff15;
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .load-bar-fill {
-      height: 100%;
-      background: var(--cyan);
-      animation: loadBar 1.2s ease forwards;
-    }
-
-    @keyframes loadBar {
-      0% {
-        width: 0%;
-      }
-      100% {
-        width: 100%;
-      }
-    }
-
-    .retry-btn {
-      background: transparent;
-      border: 1px solid var(--cyan-dim);
-      padding: 0.25rem 0.8rem;
-      font-size: 0.65rem;
-      color: var(--cyan);
-      border-radius: 2px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .retry-btn:hover {
-      background: #00f5ff20;
-      border-color: var(--cyan);
-    }
-
-    /* touch optimizations */
-    button,
-    .nav-tab,
-    .retry-btn {
-      cursor: pointer;
-      touch-action: manipulation;
-    }
-
-    @media (max-width: 480px) {
-      .shell {
-        padding: 0.75rem;
-      }
-
-      .metric-card {
-        padding: 1rem;
-      }
-
-      .stat-pill .value {
-        font-size: 1rem;
-      }
-
-      .data-table th,
-      .data-table td {
-        padding: 0.5rem 0.3rem;
-        font-size: 0.7rem;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ROBOTRON · ENV CORE</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* ── ROOT TOKENS ─────────────────────────────────────────────────── */
+:root{
+  --c:#00f5ff;
+  --cd:#00f5ff1a;
+  --cd2:#00f5ff30;
+  --cg:0 0 20px #00f5ff50;
+  --cgg:0 0 40px #00f5ff30,0 0 80px #00f5ff10;
+  --or:#ff6b35;
+  --gr:#00ff9f;
+  --re:#ff2d55;
+  --bl:#00aaff;
+  --pu:#b060ff;
+  --bg:#010306;
+  --bg2:#040810;
+  --p:rgba(4,8,18,.92);
+  --p2:rgba(6,12,22,.85);
+  --t1:#e8f4ff;
+  --t2:#5a7a90;
+  --t3:#243444;
+  --r:3px;
+  --nav-h:54px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+}
+
+/* ── RESET ────────────────────────────────────────────────────────── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+body{
+  font-family:'Share Tech Mono',monospace;
+  background:var(--bg);
+  color:#b0c8d8;
+  min-height:100dvh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── BG CANVAS ───────────────────────────────────────────────────── */
+#bgCanvas{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  width:100%;height:100%;
+}
+
+/* ── LOADER ──────────────────────────────────────────────────────── */
+#loader{
+  position:fixed;inset:0;
+  background:var(--bg);
+  z-index:9999;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:1.25rem;
+  transition:opacity .5s ease,visibility .5s ease;
+}
+#loader.hide{opacity:0;visibility:hidden;pointer-events:none}
+.l-logo{
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(1.2rem,5vw,1.8rem);
+  font-weight:900;
+  color:var(--c);
+  text-shadow:var(--cg);
+  letter-spacing:.15em;
+  display:flex;align-items:center;gap:.6rem;
+  animation:logoGlow 2s ease-in-out infinite alternate;
+}
+@keyframes logoGlow{
+  from{text-shadow:0 0 10px #00f5ff40,0 0 20px #00f5ff20}
+  to{text-shadow:0 0 20px #00f5ff80,0 0 40px #00f5ff40,0 0 60px #00f5ff20}
+}
+.l-bar{
+  width:min(220px,70vw);height:2px;
+  background:#00f5ff0e;border-radius:2px;overflow:hidden;
+  position:relative;
+}
+.l-fill{
+  height:100%;
+  background:linear-gradient(90deg,#00f5ff,#00aaff,#00f5ff);
+  background-size:200% 100%;
+  animation:lFill 1.5s ease forwards,shimmer 1s linear infinite;
+}
+@keyframes lFill{0%{width:0}100%{width:100%}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.l-sub{
+  font-size:.62rem;letter-spacing:.22em;color:var(--t2);
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink{50%{opacity:0}}
+.l-dots{display:flex;gap:.4rem;margin-top:.25rem}
+.l-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--c);opacity:.2;
+}
+.l-dot:nth-child(1){animation:dotPulse 1.2s .0s ease-in-out infinite}
+.l-dot:nth-child(2){animation:dotPulse 1.2s .2s ease-in-out infinite}
+.l-dot:nth-child(3){animation:dotPulse 1.2s .4s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.3)}}
+
+/* ── NAV ──────────────────────────────────────────────────────────── */
+#mainNav{
+  position:sticky;top:0;z-index:200;
+  display:flex;align-items:center;
+  gap:.5rem;
+  padding:.5rem .75rem;
+  padding-top:calc(.5rem + var(--safe-t));
+  min-height:var(--nav-h);
+  background:rgba(1,3,6,.97);
+  border-bottom:1px solid var(--cd);
+  backdrop-filter:blur(24px) saturate(1.5);
+  -webkit-backdrop-filter:blur(24px) saturate(1.5);
+}
+.brand{
+  font-family:'Orbitron',sans-serif;
+  font-weight:900;
+  color:var(--c);
+  text-shadow:var(--cg);
+  display:flex;align-items:center;gap:.45rem;
+  white-space:nowrap;
+  flex-shrink:0;
+  text-decoration:none;
+  font-size:clamp(.7rem,2.2vw,.9rem);
+}
+.brand-sub{
+  font-size:.48rem;
+  color:var(--t2);
+  letter-spacing:.2em;
+  display:block;
+  margin-top:.15rem;
+  line-height:1;
+}
+.brand-icon{
+  font-size:clamp(1rem,3vw,1.2rem);
+  animation:iconSpin 8s linear infinite;
+  display:inline-block;
+}
+@keyframes iconSpin{
+  0%,90%{transform:rotate(0deg)}
+  95%{transform:rotate(360deg)}
+  100%{transform:rotate(360deg)}
+}
+
+/* TABS */
+.tabs-wrap{
+  flex:1;
+  display:flex;
+  overflow-x:auto;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  gap:.2rem;
+  padding:0 .2rem;
+}
+.tabs-wrap::-webkit-scrollbar{display:none}
+.tab-btn{
+  padding:.3rem .6rem;
+  font-size:.65rem;
+  letter-spacing:.08em;
+  color:var(--t2);
+  border:1px solid transparent;
+  border-radius:var(--r);
+  cursor:pointer;
+  background:none;
+  font-family:'Share Tech Mono',monospace;
+  display:flex;align-items:center;gap:.3rem;
+  white-space:nowrap;
+  transition:color .15s,border-color .15s,background .15s,text-shadow .15s;
+  flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  min-height:34px;
+}
+.tab-btn:hover,.tab-btn:focus-visible{
+  color:var(--c);border-color:var(--cd2);
+  outline:none;
+}
+.tab-btn.active{
+  color:var(--c);
+  border-color:var(--c);
+  background:rgba(0,245,255,.07);
+  text-shadow:0 0 10px var(--c);
+}
+.tab-btn i{font-size:.75rem}
+.tab-txt{display:none}
+@media(min-width:380px){.tab-txt{display:inline}}
+
+/* STATUS BADGE */
+.status-badge{
+  display:flex;align-items:center;gap:.35rem;
+  font-size:.6rem;
+  padding:.22rem .55rem;
+  border:1px solid;
+  border-radius:var(--r);
+  white-space:nowrap;
+  font-family:'Share Tech Mono',monospace;
+  flex-shrink:0;
+  transition:all .3s;
+}
+.badge-live{border-color:var(--gr);color:var(--gr)}
+.badge-dead{border-color:var(--re);color:var(--re)}
+.badge-sync{border-color:#f0a300;color:#f0a300}
+.badge-txt{display:none}
+@media(min-width:360px){.badge-txt{display:inline}}
+
+/* ── SHELL ────────────────────────────────────────────────────────── */
+.shell{
+  position:relative;z-index:10;
+  max-width:1440px;
+  margin:0 auto;
+  padding:.65rem .65rem calc(1.5rem + var(--safe-b));
+}
+
+/* ── VIEWS ────────────────────────────────────────────────────────── */
+.view{display:none}
+.view.active{
+  display:block;
+  animation:viewIn .25s ease forwards;
+}
+@keyframes viewIn{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ── PAGE HEADER ─────────────────────────────────────────────────── */
+.page-hdr{
+  padding:.6rem 0 .5rem;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:.5rem;
+  margin-bottom:.6rem;
+}
+.page-title{
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(.8rem,2.5vw,1rem);
+  font-weight:700;
+  letter-spacing:.12em;
+  color:var(--t1);
+}
+.page-sub{
+  font-size:.56rem;
+  letter-spacing:.14em;
+  color:var(--t2);
+  margin-top:.2rem;
+}
+.page-meta{
+  display:flex;align-items:center;gap:.5rem;
+  font-size:.6rem;color:var(--t2);
+  flex-wrap:wrap;
+}
+
+/* ── PANEL ────────────────────────────────────────────────────────── */
+.pnl{
+  background:var(--p);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--cd);
+  border-radius:var(--r);
+  position:relative;
+  transition:border-color .25s,box-shadow .25s;
+  overflow:hidden;
+}
+.pnl::before{
+  content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,245,255,.5),transparent);
+  opacity:.5;
+}
+.pnl:hover{
+  border-color:rgba(0,245,255,.28);
+  box-shadow:0 0 20px rgba(0,245,255,.08),0 4px 20px rgba(0,0,0,.4);
+}
+
+/* corner accents */
+.pnl-c::after,.pnl-c::before{
+  content:'';position:absolute;
+  width:10px;height:10px;
+  border-color:rgba(0,245,255,.5);
+  border-style:solid;
+  z-index:1;
+}
+.pnl-c::before{top:-1px;left:-1px;border-width:1.5px 0 0 1.5px;border-radius:1px 0 0 0}
+.pnl-c::after{bottom:-1px;right:-1px;border-width:0 1.5px 1.5px 0;border-radius:0 0 1px 0}
+
+/* ── GRIDS ────────────────────────────────────────────────────────── */
+.g2{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));
+  gap:.65rem;
+}
+.g3{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:.5rem;
+}
+.g2c{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));
+  gap:.65rem;
+}
+
+/* ── METRIC CARDS ────────────────────────────────────────────────── */
+.mc{padding:clamp(.9rem,3.5vw,1.4rem)}
+.m-label{
+  font-size:.58rem;letter-spacing:.18em;color:var(--t2);
+  display:flex;align-items:center;gap:.4rem;
+  margin-bottom:.5rem;
+}
+.m-label i{font-size:.7rem}
+.m-val{
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(2.6rem,11vw,4.4rem);
+  font-weight:900;
+  line-height:1;
+  letter-spacing:-.02em;
+}
+.m-unit{font-size:clamp(.85rem,2.5vw,1.25rem);opacity:.5;margin-left:.08rem;font-weight:400}
+.val-temp{color:var(--or);text-shadow:0 0 30px rgba(255,107,53,.4),0 0 60px rgba(255,107,53,.15)}
+.val-hum{color:var(--bl);text-shadow:0 0 30px rgba(0,170,255,.4),0 0 60px rgba(0,170,255,.15)}
+.prog-bar{
+  height:3px;background:rgba(0,245,255,.1);
+  border-radius:2px;margin-top:.65rem;overflow:hidden;
+}
+.prog-fill{
+  height:100%;border-radius:2px;
+  transition:width .8s cubic-bezier(.2,.9,.4,1.05);
+  position:relative;
+}
+.prog-fill::after{
+  content:'';position:absolute;right:0;top:-1px;
+  width:6px;height:5px;
+  background:inherit;
+  filter:brightness(1.8) blur(2px);
+  border-radius:50%;
+}
+.m-footer{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:.55rem;padding-top:.5rem;
+  border-top:1px solid var(--cd);
+  font-size:.58rem;color:var(--t3);
+  flex-wrap:wrap;gap:.3rem;
+}
+
+/* ── STAT PILLS ──────────────────────────────────────────────────── */
+.stat-pill{
+  padding:clamp(.5rem,2vw,.8rem) .4rem;
+  text-align:center;
+}
+.stat-pill .sl{
+  font-size:.52rem;letter-spacing:.16em;
+  color:var(--t3);margin-bottom:.3rem;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stat-pill .sv{
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(.8rem,2.5vw,1.05rem);
+  font-weight:700;color:var(--t1);
+}
+.stat-pill .su{font-size:.52rem;color:var(--t2);margin-left:.1rem}
+
+/* ── SEPARATOR ───────────────────────────────────────────────────── */
+.sep{
+  display:flex;align-items:center;gap:.6rem;
+  margin:.8rem 0 .55rem;
+}
+.sep-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(0,245,255,.15),transparent)}
+.sep-line.r{background:linear-gradient(270deg,rgba(0,245,255,.15),transparent)}
+.sep-lbl{font-size:.55rem;letter-spacing:.18em;color:var(--t3);white-space:nowrap}
+
+/* ── CHART ────────────────────────────────────────────────────────── */
+.ch-wrap-pad{padding:1rem}
+.ch-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem;
+}
+.ch-title{
+  font-size:.65rem;letter-spacing:.14em;color:var(--c);
+  display:flex;align-items:center;gap:.4rem;
+}
+.ch-legend{display:flex;gap:.7rem;font-size:.58rem;color:var(--t2)}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  display:inline-block;flex-shrink:0;
+}
+.ch-canvas-wrap{
+  position:relative;overflow:hidden;
+}
+.scan-line{
+  position:absolute;top:0;left:-4px;width:4px;height:100%;
+  background:linear-gradient(180deg,transparent,rgba(0,245,255,.7),transparent);
+  animation:scanAnim 3.5s linear infinite;
+  pointer-events:none;opacity:.35;
+}
+@keyframes scanAnim{0%{left:-4px}100%{left:100%}}
+
+/* ── TABLE ────────────────────────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:.7rem}
+.tbl thead tr{border-bottom:1px solid var(--cd)}
+.tbl th{
+  padding:.45rem .5rem;
+  font-size:.55rem;letter-spacing:.12em;
+  color:var(--t3);text-align:left;
+  font-weight:normal;white-space:nowrap;
+  background:rgba(4,8,18,.9);
+}
+.tbl td{
+  padding:.5rem .5rem;
+  border-bottom:1px solid rgba(255,255,255,.03);
+  color:#9ab8cc;
+  vertical-align:middle;
+}
+.tbl tbody tr:hover{background:rgba(0,245,255,.04)}
+.tbl tbody tr:last-child td{border:none}
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tbl-num{
+  font-family:'Orbitron',sans-serif;
+  font-size:.72rem;
+}
+
+/* ── STATUS BADGE ────────────────────────────────────────────────── */
+.row-badge{
+  display:inline-flex;align-items:center;gap:.3rem;
+  padding:.15rem .45rem;border-radius:2px;
+  font-size:.58rem;white-space:nowrap;
+}
+.rb-ok{background:rgba(0,255,159,.08);border:1px solid rgba(0,255,159,.25);color:var(--gr)}
+.rb-err{background:rgba(255,45,85,.08);border:1px solid rgba(255,45,85,.25);color:var(--re)}
+
+/* ── LED ──────────────────────────────────────────────────────────── */
+.led{
+  width:8px;height:8px;border-radius:50%;
+  display:inline-block;flex-shrink:0;
+}
+.led-g{background:var(--gr);box-shadow:0 0 8px var(--gr),0 0 16px rgba(0,255,159,.3);animation:ledPulse 1.5s ease-in-out infinite alternate}
+.led-r{background:var(--re);box-shadow:0 0 8px var(--re);animation:ledPulse 1s ease-in-out infinite alternate}
+.led-y{background:#f0a300;box-shadow:0 0 8px #f0a300;animation:ledPulse 1.7s ease-in-out infinite alternate}
+.led-sm{width:6px;height:6px}
+@keyframes ledPulse{
+  from{opacity:.4;transform:scale(.8)}
+  to{opacity:1;transform:scale(1.2)}
+}
+
+/* ── BUTTONS ──────────────────────────────────────────────────────── */
+.btn-refresh{
+  background:transparent;
+  border:1px solid var(--cd2);
+  padding:.25rem .65rem;
+  font-size:.6rem;
+  color:var(--c);
+  border-radius:var(--r);
+  cursor:pointer;
+  font-family:'Share Tech Mono',monospace;
+  transition:background .2s,border-color .2s,transform .1s;
+  display:flex;align-items:center;gap:.35rem;
+  white-space:nowrap;
+  touch-action:manipulation;
+  min-height:30px;
+}
+.btn-refresh:hover{background:rgba(0,245,255,.1);border-color:var(--c)}
+.btn-refresh:active{transform:scale(.97)}
+.btn-refresh.spinning i{animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── CONFIG SETTINGS ─────────────────────────────────────────────── */
+.cfg-block{
+  padding:.7rem;
+  border:1px solid rgba(0,245,255,.1);
+  border-radius:2px;
+  background:rgba(0,245,255,.025);
+  margin-top:.5rem;
+}
+.cfg-block h4{
+  font-size:.58rem;letter-spacing:.16em;
+  color:rgba(0,245,255,.7);
+  margin-bottom:.3rem;
+}
+.cfg-block p{
+  font-size:.68rem;color:var(--t2);line-height:1.6;
+  word-break:break-all;
+}
+.cfg-val{color:var(--t1)!important}
+
+/* ── GLOWING TEXT ────────────────────────────────────────────────── */
+.glow-c{color:var(--c);text-shadow:0 0 10px rgba(0,245,255,.5)}
+.glow-g{color:var(--gr);text-shadow:0 0 10px rgba(0,255,159,.5)}
+.glow-r{color:var(--re);text-shadow:0 0 10px rgba(255,45,85,.5)}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────────── */
+.empty-row td{
+  text-align:center;
+  padding:2rem 1rem!important;
+  color:var(--t3);
+  font-size:.68rem;
+  letter-spacing:.1em;
+}
+
+/* ── TREND BADGE ─────────────────────────────────────────────────── */
+.trend-up{color:var(--re)}
+.trend-dn{color:var(--gr)}
+.trend-st{color:var(--t2)}
+
+/* ── SCROLLBAR ───────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:rgba(4,8,16,.5)}
+::-webkit-scrollbar-thumb{background:rgba(0,245,255,.25);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,245,255,.4)}
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────── */
+@media(max-width:480px){
+  .g3{grid-template-columns:repeat(3,1fr);gap:.35rem}
+  .stat-pill .sv{font-size:.78rem}
+  .stat-pill .sl{font-size:.48rem;letter-spacing:.1em}
+  .shell{padding:.5rem .5rem calc(1.5rem + var(--safe-b))}
+  .m-val{font-size:clamp(2.2rem,13vw,3.2rem)}
+  .tbl td,.tbl th{padding:.4rem .35rem;font-size:.65rem}
+}
+@media(max-width:360px){
+  .g3{gap:.25rem}
+  .stat-pill{padding:.4rem .25rem}
+  .stat-pill .sv{font-size:.72rem}
+}
+@media(min-width:768px){
+  .shell{padding:1rem 1rem 2rem}
+  .g2{gap:.85rem}
+  .g3{gap:.65rem}
+  .g2c{gap:.85rem}
+}
+@media(min-width:1024px){
+  .shell{padding:1.1rem 1.25rem 2.5rem}
+}
+
+/* ── PULSE ANIMATION FOR NEW DATA ─────────────────────────────────── */
+@keyframes dataFlash{
+  0%{background:rgba(0,245,255,.08)}
+  100%{background:transparent}
+}
+.flash{animation:dataFlash .6s ease forwards}
+
+/* ── TOOLTIP FIX ──────────────────────────────────────────────────── */
+.chartjs-tooltip{pointer-events:none}
+</style>
 </head>
 <body>
 
-<div id="loadOverlay">
-  <div class="load-logo"><i class="fas fa-microchip mr-2"></i>ROBOTRON</div>
-  <div class="load-bar-track"><div class="load-bar-fill"></div></div>
-  <div class="load-status">SYNCING WITH SUPABASE • REAL-TIME CORE</div>
+<!-- LOADER -->
+<div id="loader">
+  <div class="l-logo"><i class="fas fa-microchip brand-icon"></i> ROBOTRON</div>
+  <div class="l-bar"><div class="l-fill"></div></div>
+  <div class="l-sub">INITIALIZING ENVIRONMENTAL CORE…</div>
+  <div class="l-dots">
+    <div class="l-dot"></div>
+    <div class="l-dot"></div>
+    <div class="l-dot"></div>
+  </div>
 </div>
 
-<canvas id="bg-canvas"></canvas>
+<!-- BACKGROUND -->
+<canvas id="bgCanvas"></canvas>
 
-<nav>
+<!-- NAV -->
+<nav id="mainNav">
   <div class="brand">
-    <i class="fas fa-microchip"></i>
-    <div>
-      ROBOTRON
-      <span class="sub">ENV CORE v3.0</span>
-    </div>
+    <i class="fas fa-microchip brand-icon"></i>
+    <div>ROBOTRON<span class="brand-sub">ENVIRONMENTAL CORE v3.2</span></div>
   </div>
-  <div class="nav-tabs">
-    <button class="nav-tab active" data-view="dashboard"><i class="fas fa-chart-line"></i> DASH</button>
-    <button class="nav-tab" data-view="history"><i class="fas fa-database"></i> HISTORY</button>
-    <button class="nav-tab" data-view="settings"><i class="fas fa-cog"></i> CONFIG</button>
+  <div class="tabs-wrap">
+    <button class="tab-btn active" data-view="dash">
+      <i class="fas fa-chart-line"></i>
+      <span class="tab-txt">DASHBOARD</span>
+    </button>
+    <button class="tab-btn" data-view="hist">
+      <i class="fas fa-database"></i>
+      <span class="tab-txt">HISTORY</span>
+    </button>
+    <button class="tab-btn" data-view="cfg">
+      <i class="fas fa-cog"></i>
+      <span class="tab-txt">CONFIG</span>
+    </button>
   </div>
-  <div id="connBadge" class="conn-badge loading"><div class="led led-y"></div> SYNC</div>
+  <div id="statusBadge" class="status-badge badge-sync">
+    <div class="led led-y"></div>
+    <span class="badge-txt">CONNECTING</span>
+  </div>
 </nav>
 
+<!-- MAIN -->
 <div class="shell">
 
-  <!-- DASHBOARD -->
-  <div id="dashboardView" class="view active">
-    <div style="padding:0.5rem 0 0.75rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 0.5rem;">
+  <!-- ═══ DASHBOARD VIEW ════════════════════════════════════════════ -->
+  <div id="dashView" class="view active">
+    <div class="page-hdr">
       <div>
-        <h1 style="font-family:'Orbitron'; font-size:1rem; letter-spacing:0.12em;">REAL‑TIME MONITOR</h1>
-        <p style="font-size:0.6rem; letter-spacing:0.12em; color:#4a6a80;">ESP32 · DHT11 · SUPABASE STREAM</p>
+        <div class="page-title">REAL‑TIME MONITOR</div>
+        <div class="page-sub">ESP32 · DHT11 · SUPABASE STREAM</div>
       </div>
-      <div style="display:flex; align-items:center; gap:1rem; font-size:0.65rem;">
-        <span><i class="fas fa-clock"></i> <span id="lastUpdate">—</span></span>
-        <button id="manualRefreshBtn" class="retry-btn" style="padding:0.2rem 0.7rem;"><i class="fas fa-sync-alt"></i> REFRESH</button>
-      </div>
-    </div>
-
-    <div class="grid-2" style="margin-bottom:1rem;">
-      <div class="panel panel-corners metric-card">
-        <div class="metric-label"><i class="fas fa-temperature-high"></i> TEMPERATURE MODULE</div>
-        <div><span class="metric-value metric-temp" id="currentTemp">—</span><span class="metric-unit">°C</span></div>
-        <div class="progress-bar"><div class="progress-fill" id="tempBar" style="background:linear-gradient(90deg,#ff6b35,#ff9500);width:0%;"></div></div>
-        <div class="metric-footer" style="display:flex;justify-content:space-between;margin-top:0.5rem;"><span><i class="fas fa-wave-square"></i> LIVE</span><span id="tempTrend">—</span></div>
-      </div>
-      <div class="panel panel-corners metric-card">
-        <div class="metric-label"><i class="fas fa-tint"></i> HUMIDITY MODULE</div>
-        <div><span class="metric-value metric-hum" id="currentHum">—</span><span class="metric-unit">%</span></div>
-        <div class="progress-bar"><div class="progress-fill" id="humBar" style="background:linear-gradient(90deg,#0080ff,#00aaff);width:0%;"></div></div>
-        <div class="metric-footer" style="display:flex;justify-content:space-between;margin-top:0.5rem;"><span><i class="fas fa-broadcast-tower"></i> SENSOR: <span id="sensorStatusTxt">—</span></span><span id="humTrend">—</span></div>
+      <div class="page-meta">
+        <span><i class="fas fa-clock"></i> <span id="lastUpd">—</span></span>
+        <div class="led" id="sensorLed"></div>
+        <button class="btn-refresh" id="refreshBtn">
+          <i class="fas fa-sync-alt"></i> REFRESH
+        </button>
       </div>
     </div>
 
-    <div class="section-divider"><div class="line"></div><span class="label">TEMPERATURE STATS</span><div class="line"></div></div>
-    <div class="grid-3">
-      <div class="panel stat-pill"><div class="label">MIN TEMP</div><div class="value" id="minTemp">—<span class="unit">°C</span></div></div>
-      <div class="panel stat-pill"><div class="label">MAX TEMP</div><div class="value" id="maxTemp">—<span class="unit">°C</span></div></div>
-      <div class="panel stat-pill"><div class="label">AVG TEMP</div><div class="value" id="avgTemp">—<span class="unit">°C</span></div></div>
+    <!-- METRIC CARDS -->
+    <div class="g2" style="margin-bottom:.65rem">
+      <div class="pnl pnl-c mc" id="tempCard">
+        <div class="m-label">
+          <i class="fas fa-temperature-high" style="color:var(--or)"></i>
+          TEMPERATURE MODULE
+        </div>
+        <div>
+          <span class="m-val val-temp" id="curTemp">—</span>
+          <span class="m-unit" style="color:rgba(255,107,53,.5)">°C</span>
+        </div>
+        <div class="prog-bar">
+          <div class="prog-fill" id="tempBar"
+               style="background:linear-gradient(90deg,#ff4500,#ff6b35,#ffaa00);width:0%"></div>
+        </div>
+        <div class="m-footer">
+          <span><i class="fas fa-wave-square"></i> LIVE STREAM</span>
+          <span id="tempTrend" class="trend-st">—</span>
+        </div>
+      </div>
+
+      <div class="pnl pnl-c mc" id="humCard">
+        <div class="m-label">
+          <i class="fas fa-tint" style="color:var(--bl)"></i>
+          HUMIDITY MODULE
+        </div>
+        <div>
+          <span class="m-val val-hum" id="curHum">—</span>
+          <span class="m-unit" style="color:rgba(0,170,255,.5)">%</span>
+        </div>
+        <div class="prog-bar">
+          <div class="prog-fill" id="humBar"
+               style="background:linear-gradient(90deg,#0066ff,#00aaff,#00e5ff);width:0%"></div>
+        </div>
+        <div class="m-footer">
+          <span>
+            <i class="fas fa-broadcast-tower"></i>
+            SENSOR: <span id="sensorTxt" style="color:var(--t2)">INIT</span>
+          </span>
+          <span id="humTrend" class="trend-st">—</span>
+        </div>
+      </div>
     </div>
 
-    <div class="section-divider"><div class="line"></div><span class="label">HUMIDITY STATS</span><div class="line"></div></div>
-    <div class="grid-3">
-      <div class="panel stat-pill"><div class="label">MIN HUM</div><div class="value" id="minHum">—<span class="unit">%</span></div></div>
-      <div class="panel stat-pill"><div class="label">MAX HUM</div><div class="value" id="maxHum">—<span class="unit">%</span></div></div>
-      <div class="panel stat-pill"><div class="label">AVG HUM</div><div class="value" id="avgHum">—<span class="unit">%</span></div></div>
+    <!-- TEMP STATS -->
+    <div class="sep">
+      <div class="sep-line"></div>
+      <span class="sep-lbl">TEMPERATURE STATISTICS</span>
+      <div class="sep-line r"></div>
+    </div>
+    <div class="g3" style="margin-bottom:.1rem">
+      <div class="pnl stat-pill"><div class="sl">MIN TEMP</div><div class="sv" id="minT">—<span class="su">°C</span></div></div>
+      <div class="pnl stat-pill"><div class="sl">MAX TEMP</div><div class="sv" id="maxT">—<span class="su">°C</span></div></div>
+      <div class="pnl stat-pill"><div class="sl">AVG TEMP</div><div class="sv" id="avgT">—<span class="su">°C</span></div></div>
     </div>
 
-    <div class="grid-2-charts">
-      <div class="panel panel-corners" style="padding:1rem;"><div class="chart-header"><div class="chart-title"><i class="fas fa-chart-area"></i> 24H TELEMETRY</div><div><span class="dot" style="background:#ff6b35;"></span> °C <span class="dot ml-2" style="background:#00aaff;"></span> %</div></div><canvas id="historyChart" height="150"></canvas></div>
-      <div class="panel panel-corners" style="padding:1rem;"><div class="chart-header"><div class="chart-title"><i class="fas fa-chart-bar"></i> 7‑DAY AVERAGE</div></div><canvas id="barChart" height="150"></canvas></div>
+    <!-- HUM STATS -->
+    <div class="sep">
+      <div class="sep-line"></div>
+      <span class="sep-lbl">HUMIDITY STATISTICS</span>
+      <div class="sep-line r"></div>
+    </div>
+    <div class="g3" style="margin-bottom:.75rem">
+      <div class="pnl stat-pill"><div class="sl">MIN HUM</div><div class="sv" id="minH">—<span class="su">%</span></div></div>
+      <div class="pnl stat-pill"><div class="sl">MAX HUM</div><div class="sv" id="maxH">—<span class="su">%</span></div></div>
+      <div class="pnl stat-pill"><div class="sl">AVG HUM</div><div class="sv" id="avgH">—<span class="su">%</span></div></div>
     </div>
 
-    <div class="panel panel-corners" style="padding:1rem; margin-top:0.5rem;">
-      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom:0.8rem;"><div class="chart-title"><i class="fas fa-table"></i> LAST 10 READINGS</div><span id="totalRecords" style="font-size:0.65rem;">0 records</span></div>
-      <div style="overflow-x:auto;">
-        <table class="data-table"><thead><tr><th>#</th><th>TIMESTAMP</th><th>TEMP</th><th>HUM</th><th>STATUS</th></tr></thead><tbody id="recentTableBody"><tr><td colspan="5" style="text-align:center;">INITIALIZING STREAM...</td></tr></tbody></table>
+    <!-- CHARTS -->
+    <div class="g2c" style="margin-bottom:.65rem">
+      <div class="pnl pnl-c ch-wrap-pad">
+        <div class="ch-hdr">
+          <div class="ch-title"><i class="fas fa-chart-area"></i> 24H TELEMETRY</div>
+          <div class="ch-legend">
+            <span><span class="dot" style="background:var(--or)"></span> TEMP</span>
+            <span><span class="dot" style="background:var(--bl)"></span> HUM</span>
+          </div>
+        </div>
+        <div class="ch-canvas-wrap">
+          <canvas id="chartHist" style="max-height:190px"></canvas>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+
+      <div class="pnl pnl-c ch-wrap-pad">
+        <div class="ch-hdr">
+          <div class="ch-title"><i class="fas fa-chart-bar"></i> 7-DAY AVERAGE</div>
+          <div class="ch-legend">
+            <span><span class="dot" style="background:var(--or)"></span> TEMP</span>
+            <span><span class="dot" style="background:var(--bl)"></span> HUM</span>
+          </div>
+        </div>
+        <canvas id="chartBar" style="max-height:190px"></canvas>
+      </div>
+    </div>
+
+    <!-- RECENT TABLE -->
+    <div class="pnl pnl-c ch-wrap-pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;flex-wrap:wrap;gap:.4rem">
+        <div class="ch-title"><i class="fas fa-table"></i> DATA LOG — LAST 10</div>
+        <span style="font-size:.58rem;color:var(--t3)">
+          <span id="totalRecs">0</span> TOTAL RECORDS
+        </span>
+      </div>
+      <div class="tbl-scroll">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>TIMESTAMP</th>
+              <th>TEMP °C</th>
+              <th>HUM %</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="recentBody">
+            <tr class="empty-row"><td colspan="5">AWAITING DATA STREAM…</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- HISTORY VIEW -->
-  <div id="historyView" class="view">
-    <div style="padding:0.5rem 0 0.75rem;"><h1 style="font-family:'Orbitron';font-size:1rem;">DATA ARCHIVE</h1><p style="font-size:0.65rem;">last 50 entries + mini chart</p></div>
-    <div class="panel panel-corners" style="padding:1rem; margin-bottom:1rem;"><div class="chart-header"><div class="chart-title"><i class="fas fa-chart-line"></i> LAST 50 READINGS TREND</div></div><canvas id="histMiniChart" height="130"></canvas></div>
-    <div class="panel panel-corners" style="padding:1rem;"><div class="chart-header"><div class="chart-title"><i class="fas fa-database"></i> FULL LOG · <span id="histCount">0</span> RECORDS</div></div><div style="max-height:420px; overflow-y:auto;"><table class="data-table"><thead><tr><th>#</th><th>TIMESTAMP</th><th>TEMP</th><th>HUM</th><th>STATUS</th></tr></thead><tbody id="fullHistBody"><tr><td colspan="5">LOADING ARCHIVE...</td></tr></tbody></table></div></div>
+  <!-- ═══ HISTORY VIEW ══════════════════════════════════════════════ -->
+  <div id="histView" class="view">
+    <div class="page-hdr">
+      <div>
+        <div class="page-title">DATA ARCHIVE</div>
+        <div class="page-sub">ALL RECORDS · SUPABASE STORAGE</div>
+      </div>
+    </div>
+
+    <div class="pnl pnl-c ch-wrap-pad" style="margin-bottom:.65rem">
+      <div class="ch-hdr">
+        <div class="ch-title"><i class="fas fa-chart-line"></i> LAST 50 READINGS TREND</div>
+        <div class="ch-legend">
+          <span><span class="dot" style="background:var(--or)"></span> TEMP</span>
+          <span><span class="dot" style="background:var(--bl)"></span> HUM</span>
+        </div>
+      </div>
+      <div class="ch-canvas-wrap">
+        <canvas id="chartMini" style="max-height:190px"></canvas>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+
+    <div class="pnl pnl-c ch-wrap-pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;flex-wrap:wrap;gap:.4rem">
+        <div class="ch-title"><i class="fas fa-database"></i> FULL LOG</div>
+        <span style="font-size:.58rem;color:var(--t3)">
+          SHOWING <span id="histCount">0</span> RECORDS
+        </span>
+      </div>
+      <div class="tbl-scroll" style="max-height:420px;overflow-y:auto">
+        <table class="tbl">
+          <thead style="position:sticky;top:0;z-index:5">
+            <tr>
+              <th>#</th>
+              <th>TIMESTAMP</th>
+              <th>TEMP °C</th>
+              <th>HUM %</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="histBody">
+            <tr class="empty-row"><td colspan="5">LOADING ARCHIVE…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <!-- SETTINGS VIEW -->
-  <div id="settingsView" class="view">
-    <div style="padding:0.5rem 0 0.75rem;"><h1 style="font-family:'Orbitron';font-size:1rem;">SYSTEM CORE</h1><p style="font-size:0.65rem;">supabase integration & sensor health</p></div>
-    <div class="grid-2">
-      <div class="panel" style="padding:1rem;"><div class="chart-title"><i class="fas fa-plug"></i> BACKEND</div><div class="setting-card" style="margin-top:0.8rem;"><span style="color:#4a6a80;">URL:</span><span style="display:block;font-size:0.7rem;word-break:break-all;">https://vszeihhsgzmqadnrwckq.supabase.co</span></div><div class="setting-card mt-2"><span>REALTIME STATUS: </span><strong id="cfgRtStatus" style="color:var(--cyan);">—</strong></div></div>
-      <div class="panel" style="padding:1rem;"><div class="chart-title"><i class="fas fa-microchip"></i> SENSOR</div><div class="setting-card mt-2"><span>DEVICE: </span><strong>ESP32 + DHT11</strong></div><div class="setting-card mt-2"><span>SENSOR STATE: </span><strong id="cfgSensor">—</strong></div><div class="setting-card mt-2"><span>TOTAL RECORDS: </span><strong id="cfgRecords">0</strong></div></div>
+  <!-- ═══ CONFIG VIEW ═══════════════════════════════════════════════ -->
+  <div id="cfgView" class="view">
+    <div class="page-hdr">
+      <div>
+        <div class="page-title">SYSTEM CONFIG</div>
+        <div class="page-sub">HARDWARE · BACKEND · DIAGNOSTICS</div>
+      </div>
     </div>
-    <div class="panel" style="padding:1rem; margin-top:1rem;"><div class="chart-title"><i class="fas fa-info-circle"></i> ROBOTRON CORE</div><p style="font-size:0.75rem;margin-top:0.5rem;">Live environmental monitoring with automatic reconnect, real-time Postgres changes, and cross-device responsive design. Data is streamed directly from Supabase table <code>sensor_readings</code>. No page refresh needed.</p><p style="font-size:0.6rem;margin-top:0.8rem;">© 2025 · ESP32 + DHT11 · Supabase realtime engine</p></div>
+
+    <div class="g2" style="margin-bottom:.65rem">
+      <div class="pnl ch-wrap-pad">
+        <div class="ch-title"><i class="fas fa-plug"></i> SUPABASE BACKEND</div>
+        <div class="cfg-block">
+          <h4>PROJECT URL</h4>
+          <p class="cfg-val" style="font-size:.62rem">https://vszeihhsgzmqadnrwckq.supabase.co</p>
+        </div>
+        <div class="cfg-block">
+          <h4>REALTIME STATUS</h4>
+          <p><span id="cfgRt" class="cfg-val">—</span></p>
+        </div>
+        <div class="cfg-block">
+          <h4>CHANNEL</h4>
+          <p class="cfg-val">postgres_changes · INSERT</p>
+        </div>
+      </div>
+
+      <div class="pnl ch-wrap-pad">
+        <div class="ch-title"><i class="fas fa-microchip"></i> SENSOR HARDWARE</div>
+        <div class="cfg-block">
+          <h4>DEVICE</h4>
+          <p class="cfg-val">ESP32 + DHT11</p>
+        </div>
+        <div class="cfg-block">
+          <h4>SENSOR STATE</h4>
+          <p><span id="cfgSen" class="cfg-val">—</span></p>
+        </div>
+        <div class="cfg-block">
+          <h4>TABLE</h4>
+          <p class="cfg-val">sensor_readings</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="pnl ch-wrap-pad">
+        <div class="ch-title"><i class="fas fa-chart-pie"></i> DATA STATS</div>
+        <div class="cfg-block">
+          <h4>TOTAL RECORDS</h4>
+          <p class="cfg-val" id="cfgRec">—</p>
+        </div>
+        <div class="cfg-block">
+          <h4>STREAM MODE</h4>
+          <p class="cfg-val">Supabase Realtime (auto-reconnect)</p>
+        </div>
+        <div class="cfg-block">
+          <h4>POLLING FALLBACK</h4>
+          <p class="cfg-val">Every 30 seconds</p>
+        </div>
+      </div>
+
+      <div class="pnl ch-wrap-pad">
+        <div class="ch-title"><i class="fas fa-info-circle"></i> ABOUT</div>
+        <div class="cfg-block">
+          <p style="color:#6a8a9a;line-height:1.75;font-size:.68rem">
+            ROBOTRON Environmental Core streams live temperature &amp; humidity from an
+            ESP32 + DHT11 sensor via Supabase Postgres change events. Zero-refresh
+            real-time monitoring with auto-reconnect and full data history.
+          </p>
+        </div>
+        <div class="cfg-block">
+          <p class="cfg-val" style="font-size:.58rem">
+            v3.2 · ESP32 + DHT11 · Supabase Realtime · 2025
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
-  <footer style="margin-top:1.5rem; text-align:center; font-size:0.6rem; border-top:1px solid #00f5ff12; padding:1rem 0 0.2rem; color:#2a4a5a;">ROBOTRON ENVIRONMENTAL CORE · ACTIVE REAL-TIME STREAM</footer>
+
+  <footer style="margin-top:1.5rem;padding:.75rem 0;border-top:1px solid rgba(0,245,255,.07);text-align:center;font-size:.55rem;letter-spacing:.12em;color:var(--t3)">
+    ROBOTRON ENVIRONMENTAL CORE · ESP32 + DHT11 · SUPABASE REALTIME · © 2025
+  </footer>
 </div>
 
 <script>
-  (function() {
-    // ---------- SUPABASE CONFIG ----------
-    const SUPABASE_URL = 'https://vszeihhsgzmqadnrwckq.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzemVpaGhzZ3ptcWFkbnJ3Y2txIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MzM0OTYsImV4cCI6MjA5MDAwOTQ5Nn0.w3u5N-uRh6YZeLddDYRM1WJ2Ij-ds_Y-tDTBvlzPn40';
-    const TABLE = 'sensor_readings';
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+(function() {
+'use strict';
 
-    // ---------- GLOBALS ----------
-    let allData = [];
-    let charts = { hist: null, bar: null, mini: null };
-    let prevTemp = null, prevHum = null;
-    let channelRef = null;
-    let isSubscribed = false;
+/* ── SUPABASE CONFIG ────────────────────────────────────────────── */
+const SB_URL = 'https://vszeihhsgzmqadnrwckq.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzemVpaGhzZ3ptcWFkbnJ3Y2txIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MzM0OTYsImV4cCI6MjA5MDAwOTQ5Nn0.w3u5N-uRh6YZeLddDYRM1WJ2Ij-ds_Y-tDTBvlzPn40';
+const TABLE = 'sensor_readings';
+const sb = supabase.createClient(SB_URL, SB_KEY);
 
-    // DOM helpers
-    const $ = id => document.getElementById(id);
-    const dom = {
-      temp: $('currentTemp'), hum: $('currentHum'), lastUpd: $('lastUpdate'),
-      sensorTxt: $('sensorStatusTxt'), connBadge: $('connBadge'),
-      tempBar: $('tempBar'), humBar: $('humBar'),
-      tempTrend: $('tempTrend'), humTrend: $('humTrend'),
-      minT: $('minTemp'), maxT: $('maxTemp'), avgT: $('avgTemp'),
-      minH: $('minHum'), maxH: $('maxHum'), avgH: $('avgHum'),
-      recentBody: $('recentTableBody'), totalRecords: $('totalRecords'),
-      fullBody: $('fullHistBody'), histCount: $('histCount'),
-      cfgRt: $('cfgRtStatus'), cfgSensor: $('cfgSensor'), cfgRecords: $('cfgRecords')
-    };
+/* ── STATE ──────────────────────────────────────────────────────── */
+let allData = [];
+let charts = { hist: null, bar: null, mini: null };
+let prevTemp = null, prevHum = null;
+let rtChannel = null;
+let pollTimer = null;
+let isRefreshing = false;
 
-    // ---------- UTILS ----------
-    function fmtDateTime(iso) {
-      if (!iso) return '—';
-      const d = new Date(iso);
-      return `${d.toLocaleDateString('en-PH', {month:'short',day:'2-digit'})} ${d.toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-    }
-    function fmtShortTime(iso) {
-      const d = new Date(iso);
-      return d.toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit'});
-    }
+/* ── DOM REFS ───────────────────────────────────────────────────── */
+function $(id) { return document.getElementById(id); }
 
-    function setConnectionState(state, msg = '') {
-      const badge = dom.connBadge;
-      if (state === 'online') {
-        badge.className = 'conn-badge online';
-        badge.innerHTML = '<div class="led led-g"></div> LIVE';
-        if (dom.cfgRt) dom.cfgRt.innerText = 'ACTIVE · REALTIME';
-      } else if (state === 'offline') {
-        badge.className = 'conn-badge offline';
-        badge.innerHTML = '<div class="led led-r"></div> OFFLINE';
-        if (dom.cfgRt) dom.cfgRt.innerText = 'DISCONNECTED';
-      } else {
-        badge.className = 'conn-badge loading';
-        badge.innerHTML = '<div class="led led-y"></div> SYNC';
-        if (dom.cfgRt) dom.cfgRt.innerText = 'CONNECTING...';
+const DOM = {
+  curTemp:    $('curTemp'),
+  curHum:     $('curHum'),
+  lastUpd:    $('lastUpd'),
+  sensorTxt:  $('sensorTxt'),
+  sensorLed:  $('sensorLed'),
+  badge:      $('statusBadge'),
+  tempBar:    $('tempBar'),
+  humBar:     $('humBar'),
+  tempTrend:  $('tempTrend'),
+  humTrend:   $('humTrend'),
+  minT:       $('minT'),
+  maxT:       $('maxT'),
+  avgT:       $('avgT'),
+  minH:       $('minH'),
+  maxH:       $('maxH'),
+  avgH:       $('avgH'),
+  recentBody: $('recentBody'),
+  totalRecs:  $('totalRecs'),
+  histBody:   $('histBody'),
+  histCount:  $('histCount'),
+  cfgRt:      $('cfgRt'),
+  cfgSen:     $('cfgSen'),
+  cfgRec:     $('cfgRec'),
+  refreshBtn: $('refreshBtn'),
+  loader:     $('loader'),
+};
+
+/* ── UTILS ──────────────────────────────────────────────────────── */
+function fmtDatetime(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-PH', { month: 'short', day: '2-digit' }) +
+           ' ' + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch(e) { return '—'; }
+}
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+  } catch(e) { return ''; }
+}
+
+function avg(arr) {
+  if (!arr || !arr.length) return 0;
+  return arr.reduce((s, v) => s + v, 0) / arr.length;
+}
+
+function getTrend(prev, curr) {
+  if (prev === null || prev === undefined) return { text: '—', cls: 'trend-st' };
+  const diff = curr - prev;
+  if (Math.abs(diff) < 0.05) return { text: '▬ STABLE', cls: 'trend-st' };
+  if (diff > 0) return { text: `▲ +${diff.toFixed(1)}`, cls: 'trend-up' };
+  return { text: `▼ −${Math.abs(diff).toFixed(1)}`, cls: 'trend-dn' };
+}
+
+function flashEl(el) {
+  if (!el) return;
+  el.classList.remove('flash');
+  void el.offsetWidth; // reflow
+  el.classList.add('flash');
+}
+
+/* ── STATUS SETTERS ─────────────────────────────────────────────── */
+function setConnStatus(state) {
+  const b = DOM.badge;
+  if (!b) return;
+  const map = {
+    live: { cls: 'badge-live', led: 'led-g', txt: 'CONNECTED' },
+    dead: { cls: 'badge-dead', led: 'led-r', txt: 'OFFLINE' },
+    sync: { cls: 'badge-sync', led: 'led-y', txt: 'SYNCING' },
+  };
+  const s = map[state] || map.sync;
+  b.className = 'status-badge ' + s.cls;
+  b.innerHTML = `<div class="led ${s.led}"></div><span class="badge-txt">${s.txt}</span>`;
+  if (DOM.cfgRt) {
+    DOM.cfgRt.textContent = { live: 'ACTIVE · REALTIME', dead: 'DISCONNECTED', sync: 'CONNECTING…' }[state] || '—';
+  }
+}
+
+function setSensorStatus(ok) {
+  const led = DOM.sensorLed;
+  const txt = DOM.sensorTxt;
+  const sen = DOM.cfgSen;
+  if (led) led.className = 'led ' + (ok ? 'led-g' : 'led-r');
+  if (txt) {
+    txt.textContent = ok ? 'ONLINE' : 'ERROR';
+    txt.style.color = ok ? 'var(--gr)' : 'var(--re)';
+  }
+  if (sen) {
+    sen.innerHTML = ok
+      ? '<span class="glow-g">ACTIVE ✓</span>'
+      : '<span class="glow-r">FAILURE ✗</span>';
+  }
+}
+
+/* ── CARD UPDATE ────────────────────────────────────────────────── */
+function updateCards(row) {
+  if (!row) return;
+  const t = parseFloat(row.temperature);
+  const h = parseFloat(row.humidity);
+  if (isNaN(t) || isNaN(h)) return;
+
+  DOM.curTemp.textContent = t.toFixed(1);
+  DOM.curHum.textContent  = h.toFixed(1);
+
+  const tTrend = getTrend(prevTemp, t);
+  const hTrend = getTrend(prevHum, h);
+  DOM.tempTrend.textContent = tTrend.text;
+  DOM.tempTrend.className   = tTrend.cls;
+  DOM.humTrend.textContent  = hTrend.text;
+  DOM.humTrend.className    = hTrend.cls;
+
+  prevTemp = t;
+  prevHum  = h;
+
+  DOM.tempBar.style.width = Math.min(100, Math.max(0, (t / 50) * 100)) + '%';
+  DOM.humBar.style.width  = Math.min(100, Math.max(0, h)) + '%';
+  DOM.lastUpd.textContent = fmtDatetime(row.created_at);
+  setSensorStatus(row.sensor_ok === true);
+
+  flashEl($('tempCard'));
+  flashEl($('humCard'));
+}
+
+/* ── STATS ──────────────────────────────────────────────────────── */
+function updateStats(rows) {
+  if (!rows || !rows.length) return;
+  const ts = rows.map(r => parseFloat(r.temperature)).filter(v => !isNaN(v));
+  const hs = rows.map(r => parseFloat(r.humidity)).filter(v => !isNaN(v));
+  if (!ts.length || !hs.length) return;
+
+  DOM.minT.innerHTML = Math.min(...ts).toFixed(1) + '<span class="su">°C</span>';
+  DOM.maxT.innerHTML = Math.max(...ts).toFixed(1) + '<span class="su">°C</span>';
+  DOM.avgT.innerHTML = avg(ts).toFixed(1)          + '<span class="su">°C</span>';
+  DOM.minH.innerHTML = Math.min(...hs).toFixed(1)  + '<span class="su">%</span>';
+  DOM.maxH.innerHTML = Math.max(...hs).toFixed(1)  + '<span class="su">%</span>';
+  DOM.avgH.innerHTML = avg(hs).toFixed(1)           + '<span class="su">%</span>';
+}
+
+/* ── TABLES ─────────────────────────────────────────────────────── */
+function buildRow(r, num, showUnit) {
+  const t = parseFloat(r.temperature);
+  const h = parseFloat(r.humidity);
+  const ok = r.sensor_ok === true;
+  const tStr = isNaN(t) ? '—' : t.toFixed(1) + (showUnit ? ' °C' : '');
+  const hStr = isNaN(h) ? '—' : h.toFixed(1) + (showUnit ? ' %' : '');
+  return `<tr>
+    <td style="color:var(--t3)">${num}</td>
+    <td style="white-space:nowrap">${fmtDatetime(r.created_at)}</td>
+    <td><span class="tbl-num" style="color:#ff9060">${tStr}</span></td>
+    <td><span class="tbl-num" style="color:#60aaff">${hStr}</span></td>
+    <td><span class="row-badge ${ok ? 'rb-ok' : 'rb-err'}">
+      <div class="led led-sm ${ok ? 'led-g' : 'led-r'}"></div>${ok ? 'OK' : 'ERR'}
+    </span></td>
+  </tr>`;
+}
+
+function updateRecentTable(rows) {
+  if (!rows || !rows.length) {
+    DOM.recentBody.innerHTML = '<tr class="empty-row"><td colspan="5">NO DATA YET</td></tr>';
+    return;
+  }
+  const last10 = [...rows].reverse().slice(0, 10);
+  DOM.recentBody.innerHTML = last10.map((r, i) =>
+    buildRow(r, rows.length - i, false)
+  ).join('');
+  DOM.totalRecs.textContent = rows.length;
+  if (DOM.cfgRec) DOM.cfgRec.textContent = rows.length;
+}
+
+function updateHistTable(rows) {
+  if (!rows || !rows.length) {
+    DOM.histBody.innerHTML = '<tr class="empty-row"><td colspan="5">NO RECORDS</td></tr>';
+    DOM.histCount.textContent = '0';
+    return;
+  }
+  const rev = [...rows].reverse();
+  DOM.histCount.textContent = rev.length;
+  DOM.histBody.innerHTML = rev.slice(0, 300).map((r, i) =>
+    buildRow(r, rev.length - i, true)
+  ).join('');
+}
+
+/* ── CHART DEFAULTS ─────────────────────────────────────────────── */
+Chart.defaults.color = '#3a5a70';
+Chart.defaults.font.family = "'Share Tech Mono', monospace";
+Chart.defaults.font.size = 10;
+Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(2,6,14,.97)';
+Chart.defaults.plugins.tooltip.borderColor = 'rgba(0,245,255,.2)';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.titleColor = '#00f5ff';
+Chart.defaults.plugins.tooltip.bodyColor = '#b0c8d8';
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 3;
+Chart.defaults.plugins.tooltip.mode = 'index';
+Chart.defaults.plugins.tooltip.intersect = false;
+
+const GRID_CFG = { color: 'rgba(0,245,255,.06)', drawBorder: false };
+const TICK_T = v => (+v).toFixed(1) + '°';
+const TICK_H = v => (+v).toFixed(0) + '%';
+
+function makeGradient(ctx, c1, c2) {
+  const g = ctx.createLinearGradient(0, 0, 0, 200);
+  g.addColorStop(0, c1);
+  g.addColorStop(1, c2);
+  return g;
+}
+
+function destroyChart(key) {
+  if (charts[key]) {
+    try { charts[key].destroy(); } catch(e) {}
+    charts[key] = null;
+  }
+}
+
+/* ── CHART: 24H HISTORY ─────────────────────────────────────────── */
+function buildHistChart(rows) {
+  const el = document.getElementById('chartHist');
+  if (!el) return;
+  destroyChart('hist');
+  const ctx = el.getContext('2d');
+  const data = rows.slice(-72);
+  if (!data.length) return;
+
+  const gt = makeGradient(ctx, 'rgba(255,107,53,.35)', 'rgba(255,107,53,0)');
+  const gh = makeGradient(ctx, 'rgba(0,170,255,.28)', 'rgba(0,170,255,0)');
+
+  charts.hist = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(r => fmtTime(r.created_at)),
+      datasets: [
+        {
+          label: 'Temp °C',
+          data: data.map(r => parseFloat(r.temperature)),
+          borderColor: '#ff6b35',
+          backgroundColor: gt,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#ff6b35',
+          pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 1.5,
+          tension: .42,
+          fill: true,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Hum %',
+          data: data.map(r => parseFloat(r.humidity)),
+          borderColor: '#00aaff',
+          backgroundColor: gh,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#00aaff',
+          pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 1.5,
+          tension: .42,
+          fill: true,
+          yAxisID: 'y2',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: { duration: 500, easing: 'easeInOutQuart' },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { grid: GRID_CFG, ticks: { maxTicksLimit: 7, maxRotation: 0, color: '#2a4a5a' } },
+        y: {
+          grid: GRID_CFG,
+          ticks: { callback: TICK_T, color: 'rgba(255,107,53,.7)' },
+          title: { display: true, text: 'TEMP °C', color: 'rgba(255,107,53,.5)', font: { size: 9 } },
+        },
+        y2: {
+          position: 'right',
+          grid: { display: false },
+          ticks: { callback: TICK_H, color: 'rgba(0,170,255,.7)' },
+          title: { display: true, text: 'HUM %', color: 'rgba(0,170,255,.5)', font: { size: 9 } },
+        },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+}
+
+/* ── CHART: 7-DAY BAR ───────────────────────────────────────────── */
+function buildBarChart(rows) {
+  const el = document.getElementById('chartBar');
+  if (!el) return;
+  destroyChart('bar');
+  const ctx = el.getContext('2d');
+
+  const byDay = {};
+  rows.forEach(r => {
+    try {
+      const k = new Date(r.created_at).toLocaleDateString('en-PH', { month: 'short', day: '2-digit' });
+      if (!byDay[k]) byDay[k] = { t: [], h: [] };
+      const t = parseFloat(r.temperature), h = parseFloat(r.humidity);
+      if (!isNaN(t)) byDay[k].t.push(t);
+      if (!isNaN(h)) byDay[k].h.push(h);
+    } catch(e) {}
+  });
+
+  const days = Object.keys(byDay).slice(-7);
+  if (!days.length) return;
+
+  charts.bar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: days,
+      datasets: [
+        {
+          label: 'Avg Temp °C',
+          data: days.map(k => avg(byDay[k].t)),
+          backgroundColor: 'rgba(255,107,53,.45)',
+          borderColor: '#ff6b35',
+          borderWidth: 1.5,
+          borderRadius: 3,
+          borderSkipped: false,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Avg Hum %',
+          data: days.map(k => avg(byDay[k].h)),
+          backgroundColor: 'rgba(0,170,255,.35)',
+          borderColor: '#00aaff',
+          borderWidth: 1.5,
+          borderRadius: 3,
+          borderSkipped: false,
+          yAxisID: 'y2',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: { duration: 600 },
+      scales: {
+        x: { grid: GRID_CFG, ticks: { maxRotation: 25, color: '#2a4a5a' } },
+        y: {
+          grid: GRID_CFG,
+          ticks: { callback: TICK_T, color: 'rgba(255,107,53,.7)' },
+          title: { display: true, text: '°C', color: 'rgba(255,107,53,.5)', font: { size: 9 } },
+        },
+        y2: {
+          position: 'right',
+          grid: { display: false },
+          ticks: { callback: TICK_H, color: 'rgba(0,170,255,.7)' },
+          title: { display: true, text: '%', color: 'rgba(0,170,255,.5)', font: { size: 9 } },
+        },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+}
+
+/* ── CHART: MINI TREND (HISTORY) ────────────────────────────────── */
+function buildMiniChart(rows) {
+  const el = document.getElementById('chartMini');
+  if (!el) return;
+  destroyChart('mini');
+  const ctx = el.getContext('2d');
+  const data = rows.slice(-50);
+  if (!data.length) return;
+
+  const gt = makeGradient(ctx, 'rgba(255,107,53,.25)', 'rgba(255,107,53,0)');
+  const gh = makeGradient(ctx, 'rgba(0,170,255,.2)', 'rgba(0,170,255,0)');
+
+  charts.mini = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(r => fmtTime(r.created_at)),
+      datasets: [
+        {
+          label: 'Temp °C',
+          data: data.map(r => parseFloat(r.temperature)),
+          borderColor: '#ff6b35',
+          backgroundColor: gt,
+          borderWidth: 1.8,
+          pointRadius: 2,
+          pointBackgroundColor: '#ff6b35',
+          pointHoverRadius: 5,
+          tension: .38,
+          fill: true,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Hum %',
+          data: data.map(r => parseFloat(r.humidity)),
+          borderColor: '#00aaff',
+          backgroundColor: gh,
+          borderWidth: 1.8,
+          pointRadius: 2,
+          pointBackgroundColor: '#00aaff',
+          pointHoverRadius: 5,
+          tension: .38,
+          fill: true,
+          yAxisID: 'y2',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: { duration: 400 },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { grid: GRID_CFG, ticks: { maxTicksLimit: 8, maxRotation: 0, color: '#2a4a5a' } },
+        y: { grid: GRID_CFG, ticks: { callback: TICK_T, color: 'rgba(255,107,53,.7)' } },
+        y2: {
+          position: 'right',
+          grid: { display: false },
+          ticks: { callback: TICK_H, color: 'rgba(0,170,255,.7)' },
+        },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+}
+
+/* ── REBUILD ALL UI ─────────────────────────────────────────────── */
+function rebuildAll() {
+  if (!allData.length) return;
+  const latest = allData[allData.length - 1];
+  updateCards(latest);
+  updateStats(allData);
+  updateRecentTable(allData);
+  buildHistChart(allData);
+  buildBarChart(allData);
+  if ($('histView') && $('histView').classList.contains('active')) {
+    updateHistTable(allData);
+    buildMiniChart(allData);
+  }
+}
+
+/* ── FETCH DATA ─────────────────────────────────────────────────── */
+async function fetchData() {
+  try {
+    const { data: rows, error } = await sb
+      .from(TABLE)
+      .select('*')
+      .order('created_at', { ascending: true })
+      .limit(800);
+    if (error) throw error;
+    allData = rows || [];
+    setConnStatus('live');
+    return allData;
+  } catch (e) {
+    console.error('[ROBOTRON] Fetch error:', e);
+    setConnStatus('dead');
+    return [];
+  }
+}
+
+/* ── FULL REFRESH ───────────────────────────────────────────────── */
+async function fullRefresh() {
+  if (isRefreshing) return;
+  isRefreshing = true;
+  setConnStatus('sync');
+  DOM.refreshBtn.classList.add('spinning');
+  await fetchData();
+  rebuildAll();
+  DOM.refreshBtn.classList.remove('spinning');
+  isRefreshing = false;
+}
+
+/* ── REALTIME CHANNEL ───────────────────────────────────────────── */
+function startRealtime() {
+  if (rtChannel) {
+    try { sb.removeChannel(rtChannel); } catch(e) {}
+    rtChannel = null;
+  }
+
+  rtChannel = sb.channel('rt-robotron-v32')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE }, payload => {
+      if (!payload || !payload.new) return;
+      allData = [...allData, payload.new];
+      rebuildAll();
+      setConnStatus('live');
+    })
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') {
+        setConnStatus('live');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        setConnStatus('dead');
+        setTimeout(startRealtime, 6000);
       }
+    });
+}
+
+/* ── POLLING FALLBACK ───────────────────────────────────────────── */
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    if (document.visibilityState === 'visible') {
+      await fetchData();
+      rebuildAll();
+    }
+  }, 30000);
+}
+
+/* ── TAB NAVIGATION ─────────────────────────────────────────────── */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const viewId = btn.dataset.view + 'View';
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const targetView = $(viewId);
+    if (targetView) targetView.classList.add('active');
+
+    if (btn.dataset.view === 'hist' && allData.length) {
+      // Slight delay for DOM to render
+      setTimeout(() => {
+        updateHistTable(allData);
+        buildMiniChart(allData);
+      }, 50);
+    }
+  });
+});
+
+/* ── REFRESH BUTTON ─────────────────────────────────────────────── */
+DOM.refreshBtn.addEventListener('click', fullRefresh);
+
+/* ── BACKGROUND CANVAS FX ───────────────────────────────────────── */
+(function bgFx() {
+  const cv = document.getElementById('bgCanvas');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = cv.width = window.innerWidth;
+    H = cv.height = window.innerHeight;
+  }
+
+  function initParticles() {
+    particles = Array.from({ length: Math.min(55, Math.floor(W * H / 25000)) }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - .5) * .35,
+      vy: (Math.random() - .5) * .35,
+      r: Math.random() * 1.4 + .4,
+      o: Math.random() * .4 + .1,
+    }));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = '#010306';
+    ctx.fillRect(0, 0, W, H);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(0,245,255,.05)';
+    ctx.lineWidth = .5;
+    const gs = 60;
+    for (let x = 0; x < W; x += gs) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += gs) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
 
-    function setSensorHealth(ok) {
-      if (ok) {
-        dom.sensorTxt.innerText = 'ONLINE';
-        dom.sensorTxt.style.color = '#00ff9f';
-        if (dom.cfgSensor) dom.cfgSensor.innerHTML = '<span style="color:#00ff9f;">ACTIVE ✓</span>';
-      } else {
-        dom.sensorTxt.innerText = 'ERROR';
-        dom.sensorTxt.style.color = '#ff2d55';
-        if (dom.cfgSensor) dom.cfgSensor.innerHTML = '<span style="color:#ff2d55;">FAILURE</span>';
+    // Pulse rings
+    const t = Date.now() * .001;
+    const origins = [[W * .1, H * .88], [W * .9, H * .12], [W * .5, H * .5]];
+    origins.forEach(([cx, cy], idx) => {
+      for (let i = 0; i < 3; i++) {
+        const r = ((t * 22 + idx * 55 + i * 40) % 120);
+        const alpha = Math.max(0, .15 - r / 800);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0,245,255,${alpha})`;
+        ctx.lineWidth = .8;
+        ctx.stroke();
       }
-    }
-
-    function trendIcon(prev, curr) {
-      if (prev === null || prev === undefined) return '—';
-      if (curr > prev) return `▲ +${(curr - prev).toFixed(1)}`;
-      if (curr < prev) return `▼ −${(prev - curr).toFixed(1)}`;
-      return '▬ STABLE';
-    }
-
-    function updateCards(record) {
-      if (!record) return;
-      const t = record.temperature, h = record.humidity;
-      dom.temp.innerText = t.toFixed(1);
-      dom.hum.innerText = h.toFixed(1);
-      dom.tempTrend.innerText = trendIcon(prevTemp, t);
-      dom.humTrend.innerText = trendIcon(prevHum, h);
-      prevTemp = t; prevHum = h;
-      const tempPercent = Math.min(100, Math.max(0, (t / 50) * 100));
-      dom.tempBar.style.width = `${tempPercent}%`;
-      dom.humBar.style.width = `${Math.min(100, Math.max(0, h))}%`;
-      dom.lastUpd.innerText = fmtDateTime(record.created_at);
-      setSensorHealth(record.sensor_ok === true);
-    }
-
-    function updateStats(data) {
-      if (!data.length) return;
-      const temps = data.map(r => r.temperature);
-      const hums = data.map(r => r.humidity);
-      dom.minT.innerText = Math.min(...temps).toFixed(1); dom.maxT.innerText = Math.max(...temps).toFixed(1); dom.avgT.innerText = (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1);
-      dom.minH.innerText = Math.min(...hums).toFixed(1); dom.maxH.innerText = Math.max(...hums).toFixed(1); dom.avgH.innerText = (hums.reduce((a,b)=>a+b,0)/hums.length).toFixed(1);
-    }
-
-    function updateRecentTable(data) {
-      const last10 = [...data].reverse().slice(0,10);
-      if (!last10.length) { dom.recentBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">NO DATA YET</td></tr>'; return; }
-      dom.recentBody.innerHTML = last10.map((r, idx) => `
-        <tr>
-          <td style="color:#3a5a70;">${data.length - idx}</td>
-          <td>${fmtDateTime(r.created_at)}</td>
-          <td style="color:#ff9060;">${r.temperature.toFixed(1)}</td>
-          <td style="color:#60aaff;">${r.humidity.toFixed(1)}</td>
-          <td><span class="badge ${r.sensor_ok ? 'badge-ok' : 'badge-err'}"><div class="led ${r.sensor_ok ? 'led-g' : 'led-r'}" style="width:6px;height:6px;"></div> ${r.sensor_ok ? 'OK' : 'ERR'}</span></td>
-        </tr>`).join('');
-      dom.totalRecords.innerText = data.length;
-      if (dom.cfgRecords) dom.cfgRecords.innerText = data.length;
-    }
-
-    function updateFullHistory(data) {
-      const rev = [...data].reverse();
-      dom.histCount.innerText = rev.length;
-      if (!rev.length) { dom.fullBody.innerHTML = '<tr><td colspan="5">NO RECORDS</td></tr>'; return; }
-      dom.fullBody.innerHTML = rev.slice(0,200).map((r, i) => `
-        <tr><td style="color:#3a5a70;">${rev.length - i}</td><td>${fmtDateTime(r.created_at)}</td><td>${r.temperature.toFixed(1)} °C</td><td>${r.humidity.toFixed(1)} %</td><td><span class="badge ${r.sensor_ok ? 'badge-ok' : 'badge-err'}">${r.sensor_ok ? 'OK' : 'ERR'}</span></td></tr>`).join('');
-    }
-
-    // ---------- CHARTS ----------
-    function destroyChart(chartInstance) { if (chartInstance) { chartInstance.destroy(); } return null; }
-    function renderHistoryChart(data) {
-      const last60 = data.slice(-60);
-      const labels = last60.map(r => fmtShortTime(r.created_at));
-      const temps = last60.map(r => r.temperature);
-      const hums = last60.map(r => r.humidity);
-      const ctx = document.getElementById('historyChart')?.getContext('2d');
-      if (!ctx) return;
-      if (charts.hist) charts.hist.destroy();
-      charts.hist = new Chart(ctx, {
-        type: 'line', data: { labels, datasets: [
-          { label: 'Temp °C', data: temps, borderColor: '#ff6b35', backgroundColor: '#ff6b3510', borderWidth: 1.8, pointRadius: 0, tension: 0.3, fill: true, yAxisID: 'y' },
-          { label: 'Hum %', data: hums, borderColor: '#00aaff', backgroundColor: '#00aaff08', borderWidth: 1.8, pointRadius: 0, tension: 0.3, fill: true, yAxisID: 'y2' }
-        ] }, options: { responsive: true, maintainAspectRatio: true, scales: { y: { grid: { color: '#00f5ff10' }, title: { display: true, text: '°C', color: '#ff6b35' } }, y2: { position: 'right', grid: { display: false }, title: { text: '%', color: '#00aaff' } } }, plugins: { legend: { display: false }, tooltip: { mode: 'index' } } }
-      });
-    }
-    function renderBarChart(data) {
-      const byDay = {};
-      data.forEach(r => { const d = new Date(r.created_at).toLocaleDateString('en-PH',{month:'short',day:'2-digit'}); if(!byDay[d]) byDay[d]={t:[],h:[]}; byDay[d].t.push(r.temperature); byDay[d].h.push(r.humidity); });
-      const days = Object.keys(byDay).slice(-7);
-      const avgT = days.map(d => byDay[d].t.reduce((a,b)=>a+b,0)/byDay[d].t.length);
-      const avgH = days.map(d => byDay[d].h.reduce((a,b)=>a+b,0)/byDay[d].h.length);
-      const ctx = document.getElementById('barChart')?.getContext('2d');
-      if (!ctx) return;
-      if (charts.bar) charts.bar.destroy();
-      charts.bar = new Chart(ctx, { type: 'bar', data: { labels: days, datasets: [{ label: 'Avg Temp', data: avgT, backgroundColor: '#ff6b3570', borderRadius: 3, yAxisID: 'y' }, { label: 'Avg Hum', data: avgH, backgroundColor: '#00aaff70', borderRadius: 3, yAxisID: 'y2' }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#00f5ff10' } }, y2: { position: 'right', grid: { display: false } } } } });
-    }
-    function renderMiniChart(data) {
-      const last50 = data.slice(-50);
-      const ctx = document.getElementById('histMiniChart')?.getContext('2d');
-      if (!ctx) return;
-      if (charts.mini) charts.mini.destroy();
-      charts.mini = new Chart(ctx, { type: 'line', data: { labels: last50.map(r => fmtShortTime(r.created_at)), datasets: [{ label: 'Temp', data: last50.map(r=>r.temperature), borderColor: '#ff6b35', borderWidth: 1.5, pointRadius: 1.5, tension: 0.2 }, { label: 'Hum', data: last50.map(r=>r.humidity), borderColor: '#00aaff', borderWidth: 1.5, pointRadius: 1.5, tension: 0.2 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } } });
-    }
-
-    // ---------- FETCH + REFRESH ----------
-    async function fetchAllData() {
-      try {
-        const { data, error } = await sb.from(TABLE).select('*').order('created_at', { ascending: true }).limit(800);
-        if (error) throw error;
-        if (data) allData = data;
-        setConnectionState('online');
-        return data || [];
-      } catch (err) {
-        console.error('fetch error:', err);
-        setConnectionState('offline');
-        return [];
-      }
-    }
-
-    async function fullRefresh() {
-      const data = await fetchAllData();
-      if (!data.length) {
-        dom.temp.innerText = '—'; dom.hum.innerText = '—';
-        setSensorHealth(false);
-        return;
-      }
-      const latest = data[data.length - 1];
-      updateCards(latest);
-      updateStats(data);
-      updateRecentTable(data);
-      renderHistoryChart(data);
-      renderBarChart(data);
-      if (document.getElementById('historyView').classList.contains('active')) {
-        updateFullHistory(data);
-        renderMiniChart(data);
-      }
-    }
-
-    // ---------- REALTIME SUBSCRIPTION (auto reconnection) ----------
-    function setupRealtimeSubscription() {
-      if (channelRef) {
-        try { sb.removeChannel(channelRef); } catch(e) {}
-        channelRef = null;
-      }
-      const channel = sb.channel('robotron-live-reliable');
-      channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE }, (payload) => {
-        if (payload.new) {
-          allData = [...allData, payload.new];
-          updateCards(payload.new);
-          updateStats(allData);
-          updateRecentTable(allData);
-          renderHistoryChart(allData);
-          renderBarChart(allData);
-          if (document.getElementById('historyView').classList.contains('active')) {
-            updateFullHistory(allData);
-            renderMiniChart(allData);
-          }
-          setConnectionState('online');
-        }
-      }).subscribe((status) => {
-        if (status === 'SUBSCRIBED') { setConnectionState('online'); isSubscribed = true; }
-        else if (status === 'CHANNEL_ERROR') { setConnectionState('offline'); setTimeout(() => { if (!isSubscribed) setupRealtimeSubscription(); }, 5000); }
-      });
-      channelRef = channel;
-    }
-
-    // ---------- MANUAL REFRESH ----------
-    document.getElementById('manualRefreshBtn')?.addEventListener('click', async () => {
-      await fullRefresh();
     });
 
-    // ---------- NAVIGATION ----------
-    document.querySelectorAll('.nav-tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const viewId = btn.dataset.view + 'View';
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
-        if (btn.dataset.view === 'history' && allData.length) {
-          updateFullHistory(allData);
-          renderMiniChart(allData);
-        }
-      });
-    });
+    // Particles
+    for (const p of particles) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,245,255,${p.o})`;
+      ctx.fill();
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = W;
+      if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H;
+      if (p.y > H) p.y = 0;
+    }
 
-    // ---------- BACKGROUND ANIMATION (performance optimized) ----------
-    (function bgAnimation() {
-      const canvas = document.getElementById('bg-canvas');
-      let ctx = canvas.getContext('2d');
-      let w, h, particles = [];
-      function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
-      function initParticles() { particles = Array.from({ length: 55 }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35, r: Math.random() * 1.5 + 0.8 })); }
-      function animate() {
-        if (!ctx) return;
-        ctx.clearRect(0, 0, w, h);
-        ctx.fillStyle = '#030508'; ctx.fillRect(0, 0, w, h);
-        ctx.strokeStyle = '#00f5ff10'; ctx.lineWidth = 0.5;
-        for (let i = 0; i < w; i += 60) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
-        for (let i = 0; i < h; i += 60) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke(); }
-        for (let p of particles) {
-          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(0,245,255,0.35)'; ctx.fill();
-          p.x += p.vx; p.y += p.vy;
-          if (p.x < 0) p.x = w; if (p.x > w) p.x = 0; if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
-        }
-        requestAnimationFrame(animate);
-      }
-      window.addEventListener('resize', () => { resize(); initParticles(); });
-      resize(); initParticles(); animate();
-    })();
+    requestAnimationFrame(draw);
+  }
 
-    // ---------- BOOT ----------
-    window.addEventListener('load', async () => {
-      const overlay = document.getElementById('loadOverlay');
-      await fullRefresh();
-      setupRealtimeSubscription();
-      setTimeout(() => { overlay.classList.add('hide'); setTimeout(() => overlay.remove(), 500); }, 1000);
-    });
-  })();
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { resize(); initParticles(); }, 150);
+  });
+
+  resize();
+  initParticles();
+  draw();
+})();
+
+/* ── VISIBILITY CHANGE ──────────────────────────────────────────── */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    fullRefresh();
+  }
+});
+
+/* ── BOOT ───────────────────────────────────────────────────────── */
+window.addEventListener('load', async () => {
+  setConnStatus('sync');
+  await fullRefresh();
+  startRealtime();
+  startPolling();
+
+  // Hide loader
+  setTimeout(() => {
+    if (DOM.loader) {
+      DOM.loader.classList.add('hide');
+    }
+  }, 1200);
+});
+
+})();
 </script>
 </body>
 </html>
