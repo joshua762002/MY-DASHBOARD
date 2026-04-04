@@ -1,1 +1,1 @@
-midterm projects
+midterm project
